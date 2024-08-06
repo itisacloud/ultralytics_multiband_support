@@ -49,7 +49,7 @@ from ultralytics_MB.utils.torch_utils import select_device, smart_inference_mode
 
 STREAM_WARNING = """
 WARNING ⚠️ inference results will accumulate in RAM unless `stream=True` is passed, causing potential out-of-memory
-errors for large sources or long-running streams and videos. See https://docs.ultralytics.com/modes/predict/ for help.
+errors for large sources or long-running streams and videos. See https://docs.ultralytics_MB.com/modes/predict/ for help.
 
 Example:
     results = model(source=..., stream=True)  # generator of Results objects
@@ -189,12 +189,18 @@ class BasePredictor:
 
     def predict_cli(self, source=None, model=None):
         """
-        Method used for CLI prediction.
+        Method used for Command Line Interface (CLI) prediction.
 
-        It uses always generator as outputs as not required by CLI mode.
+        This function is designed to run predictions using the CLI. It sets up the source and model, then processes
+        the inputs in a streaming manner. This method ensures that no outputs accumulate in memory by consuming the
+        generator without storing results.
+
+        Note:
+            Do not modify this function or remove the generator. The generator ensures that no outputs are
+            accumulated in memory, which is critical for preventing memory issues during long-running predictions.
         """
         gen = self.stream_inference(source, model)
-        for _ in gen:  # noqa, running CLI inference without accumulating any outputs (do not modify)
+        for _ in gen:  # sourcery skip: remove-empty-nested-block, noqa
             pass
 
     def setup_source(self, source):
@@ -339,13 +345,13 @@ class BasePredictor:
             frame = self.dataset.count
         else:
             match = re.search(r"frame (\d+)/", s[i])
-            frame = int(match.group(1)) if match else None  # 0 if frame undetermined
+            frame = int(match[1]) if match else None  # 0 if frame undetermined
 
         self.txt_path = self.save_dir / "labels" / (p.stem + ("" if self.dataset.mode == "image" else f"_{frame}"))
         string += "%gx%g " % im.shape[2:]
         result = self.results[i]
         result.save_dir = self.save_dir.__str__()  # used in other locations
-        string += result.verbose() + f"{result.speed['inference']:.1f}ms"
+        string += f"{result.verbose()}{result.speed['inference']:.1f}ms"
 
         # Add predictions to image
         if self.args.save or self.args.show:

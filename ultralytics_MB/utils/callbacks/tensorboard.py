@@ -1,4 +1,5 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
+
 import contextlib
 
 from ultralytics_MB.utils import LOGGER, SETTINGS, TESTS_RUNNING, colorstr

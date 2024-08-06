@@ -1,13 +1,12 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import torch
-import torchvision
 
 import torch.nn as nn
 from ultralytics_MB.data import ClassificationDataset, build_dataloader
 from ultralytics_MB.engine.trainer import BaseTrainer
 from ultralytics_MB.models import yolo
-from ultralytics_MB.nn.tasks import ClassificationModel, attempt_load_one_weight
+from ultralytics_MB.nn.tasks import ClassificationModel
 from ultralytics_MB.utils import DEFAULT_CFG, LOGGER, RANK, colorstr
 from ultralytics_MB.utils.plotting import plot_images, plot_results
 from ultralytics_MB.utils.torch_utils import is_parallel, strip_optimizer, torch_distributed_zero_first
@@ -102,23 +101,16 @@ class ClassificationTrainer(BaseTrainer):
 
     def setup_model(self):
         """Load, create or download model for any task."""
-        if isinstance(self.model, torch.nn.Module):  # if model is loaded beforehand. No setup needed
-            return
+        import torchvision  # scope for faster 'import ultralytics'
 
-        model, ckpt = str(self.model), None
-        # Load a YOLO model locally, from torchvision, or from Ultralytics assets
-        if model.endswith(".pt"):
-            self.model, ckpt = attempt_load_one_weight(model, device="cpu")
-            for p in self.model.parameters():
-                p.requires_grad = True  # for training
-        elif model.split(".")[-1] in ("yaml", "yml"):
-            self.model = self.get_model(cfg=model)
-        elif model in torchvision.models.__dict__:
-            self.model = torchvision.models.__dict__[model](weights="IMAGENET1K_V1" if self.args.pretrained else None)
+        if str(self.model) in torchvision.models.__dict__:
+            self.model = torchvision.models.__dict__[self.model](
+                weights="IMAGENET1K_V1" if self.args.pretrained else None
+            )
+            ckpt = None
         else:
-            raise FileNotFoundError(f"ERROR: model={model} not found locally or online. Please check model name.")
+            ckpt = super().setup_model()
         ClassificationModel.reshape_outputs(self.model, self.data["nc"])
-
         return ckpt
 
     def build_dataset(self, img_path, mode="train", batch=None):

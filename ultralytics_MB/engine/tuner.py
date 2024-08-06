@@ -108,7 +108,7 @@ class Tuner:
         callbacks.add_integration_callbacks(self)
         LOGGER.info(
             f"{self.prefix}Initialized Tuner instance with 'tune_dir={self.tune_dir}'\n"
-            f"{self.prefix}💡 Learn about tuning at https://docs.ultralytics.com/guides/hyperparameter-tuning"
+            f"{self.prefix}💡 Learn about tuning at https://docs.ultralytics_MB.com/guides/hyperparameter-tuning"
         )
 
     def _mutate(self, parent="single", n=5, mutation=0.8, sigma=0.2):
@@ -218,7 +218,7 @@ class Tuner:
                 for ckpt in weights_dir.glob("*.pt"):
                     shutil.copy2(ckpt, self.tune_dir / "weights")
             elif cleanup:
-                shutil.rmtree(ckpt_file.parent)  # remove iteration weights/ dir to reduce storage space
+                shutil.rmtree(weights_dir, ignore_errors=True)  # remove iteration weights/ dir to reduce storage space
 
             # Plot tune results
             plot_tune_results(self.tune_csv)

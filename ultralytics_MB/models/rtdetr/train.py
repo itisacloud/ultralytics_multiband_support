@@ -7,6 +7,7 @@ import torch
 from ultralytics_MB.models.yolo.detect import DetectionTrainer
 from ultralytics_MB.nn.tasks import RTDETRDetectionModel
 from ultralytics_MB.utils import RANK, colorstr
+
 from .val import RTDETRDataset, RTDETRValidator
 
 

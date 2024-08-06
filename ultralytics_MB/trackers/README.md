@@ -39,7 +39,7 @@ To run the tracker on video streams, use a trained Detect, Segment or Pose model
 #### Python
 
 ```python
-from ultralytics_MB import YOLO
+from ultralytics import YOLO
 
 # Load an official or custom model
 model = YOLO("yolov8n.pt")  # Load an official Detect model
@@ -48,9 +48,7 @@ model = YOLO("yolov8n-pose.pt")  # Load an official Pose model
 model = YOLO("path/to/best.pt")  # Load a custom trained model
 
 # Perform tracking with the model
-results = model.track(
-    source="https://youtu.be/LNwODJXcvt4", show=True
-)  # Tracking with default tracker
+results = model.track(source="https://youtu.be/LNwODJXcvt4", show=True)  # Tracking with default tracker
 results = model.track(
     source="https://youtu.be/LNwODJXcvt4", show=True, tracker="bytetrack.yaml"
 )  # Tracking with ByteTrack tracker
@@ -80,13 +78,11 @@ Tracking configuration shares properties with Predict mode, such as `conf`, `iou
 #### Python
 
 ```python
-from ultralytics_MB import YOLO
+from ultralytics import YOLO
 
 # Configure the tracking parameters and run the tracker
 model = YOLO("yolov8n.pt")
-results = model.track(
-    source="https://youtu.be/LNwODJXcvt4", conf=0.3, iou=0.5, show=True
-)
+results = model.track(source="https://youtu.be/LNwODJXcvt4", conf=0.3, iou=0.5, show=True)
 ```
 
 #### CLI
@@ -103,13 +99,11 @@ Ultralytics also allows you to use a modified tracker configuration file. To do 
 #### Python
 
 ```python
-from ultralytics_MB import YOLO
+from ultralytics import YOLO
 
 # Load the model and run the tracker with a custom configuration file
 model = YOLO("yolov8n.pt")
-results = model.track(
-    source="https://youtu.be/LNwODJXcvt4", tracker="custom_tracker.yaml"
-)
+results = model.track(source="https://youtu.be/LNwODJXcvt4", tracker="custom_tracker.yaml")
 ```
 
 #### CLI
@@ -131,7 +125,8 @@ Here is a Python script using OpenCV (`cv2`) and YOLOv8 to run object tracking o
 
 ```python
 import cv2
-from ultralytics_MB import YOLO
+
+from ultralytics import YOLO
 
 # Load the YOLOv8 model
 model = YOLO("yolov8n.pt")
@@ -183,7 +178,7 @@ from collections import defaultdict
 import cv2
 import numpy as np
 
-from ultralytics_MB import YOLO
+from ultralytics import YOLO
 
 # Load the YOLOv8 model
 model = YOLO("yolov8n.pt")
@@ -264,10 +259,12 @@ Finally, after all threads have completed their task, the windows displaying the
 import threading
 
 import cv2
-from ultralytics_MB import YOLO
+
+from ultralytics import YOLO
 
 
 def run_tracker_in_thread(filename, model):
+    """Starts multi-thread tracking on video from `filename` using `model` and displays results frame by frame."""
     video = cv2.VideoCapture(filename)
     frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     for _ in range(frames):
@@ -289,12 +286,8 @@ video_file1 = "path/to/video1.mp4"
 video_file2 = "path/to/video2.mp4"
 
 # Create the tracker threads
-tracker_thread1 = threading.Thread(
-    target=run_tracker_in_thread, args=(video_file1, model1), daemon=True
-)
-tracker_thread2 = threading.Thread(
-    target=run_tracker_in_thread, args=(video_file2, model2), daemon=True
-)
+tracker_thread1 = threading.Thread(target=run_tracker_in_thread, args=(video_file1, model1), daemon=True)
+tracker_thread2 = threading.Thread(target=run_tracker_in_thread, args=(video_file2, model2), daemon=True)
 
 # Start the tracker threads
 tracker_thread1.start()
