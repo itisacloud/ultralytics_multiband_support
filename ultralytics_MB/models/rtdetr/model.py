@@ -11,8 +11,8 @@ from ultralytics_MB.engine.model import Model
 from ultralytics_MB.nn.tasks import RTDETRDetectionModel
 from pathlib import Path
 
-from ultralytics.engine.model import Model
-from ultralytics.nn.tasks import RTDETRDetectionModel
+from ultralytics_MB.engine.model import Model
+from ultralytics_MB.nn.tasks import RTDETRDetectionModel
 
 from .predict import RTDETRPredictor
 from .train import RTDETRTrainer
