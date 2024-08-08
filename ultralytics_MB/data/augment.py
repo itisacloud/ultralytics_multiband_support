@@ -2230,8 +2230,11 @@ class RotateRGBA(torch.nn.Module):
         img_rgb_rotated = np.array(img_rgb_pil)
 
         # Resize the alpha channel to match the rotated image's dimensions
-        img_a_resized = Image.fromarray(img_a).resize(img_rgb_rotated.shape[1::-1], Image.NEAREST)
+        img_a = Image.fromarray(img_a).rotate(angle, expand=self.expand)
+        img_a_resized = img_a.resize(img_rgb_rotated.shape[1::-1], Image.NEAREST)
         img_a_resized = np.array(img_a_resized)
+
+
 
         # Reassemble the RGBA image
         img_rgba_rotated = np.dstack((img_rgb_rotated, img_a_resized))
@@ -2257,8 +2260,11 @@ class GaussianBlurRGBA(torch.nn.Module):
         img_rgb_pil = img_rgb_pil.filter(ImageFilter.GaussianBlur(radius=random.uniform(*self.sigma_range)))
         img_rgb_blurred = np.array(img_rgb_pil)
 
+        img_a_pil = Image.fromarray(img_a, mode='L')
+        img_a_blurred = np.array(img_a_pil.filter(ImageFilter.GaussianBlur(radius=random.uniform(*self.sigma_range))))
+
         # Reassemble the RGBA image and convert back to PIL Image
-        img_rgba_blurred = np.dstack((img_rgb_blurred, img_a))
+        img_rgba_blurred = np.dstack((img_rgb_blurred, img_a_blurred))
         return Image.fromarray(img_rgba_blurred)
 
 class resize_to_target(torch.nn.Module):
