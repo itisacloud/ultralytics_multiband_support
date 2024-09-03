@@ -1,4 +1,4 @@
-This is a fork from the original ultralytics package. The original package is a great tool for object detection and image classification. The original package is still available at 
+This is a fork from the original ultralytics package. The original package is a great tool for object detection and image classification. The original package is available at 
 https://github.com/ultralytics/ultralytics
 
 While the original package is great for object detection, its not suited for detection on multispectral images. This package is designed to work with multispectral images, and it is also designed to work with the new version of the PyTorch library. The original package is designed to work with the old version of the PyTorch library.
@@ -15,10 +15,3 @@ Additionaly the support of Siamese and Dual_stream yolo models have been include
 
 As this package is currently subject to heavy changes please expect the code to be unstable.
 I would advise to use a fixed version of the package to avoid any issues.
-
-
-
-
-
-
-
