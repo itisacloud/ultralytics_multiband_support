@@ -14,7 +14,9 @@ Additionaly the support of Siamese and Dual_stream yolo models have been include
 - A config for a siamese YOLOv9e model has been included. Futher configs will be add in the future.
 
 As this package is currently subject to heavy changes please expect the code to be unstable.
-I would advise to use a fixed version of the package to avoid any issues. 
+I would advise to use a fixed version of the package to avoid any issues.
+
+
 
 
 
