@@ -108,7 +108,7 @@ class Tuner:
         callbacks.add_integration_callbacks(self)
         LOGGER.info(
             f"{self.prefix}Initialized Tuner instance with 'tune_dir={self.tune_dir}'\n"
-            f"{self.prefix}💡 Learn about tuning at https://docs.ultralytics.com/guides/hyperparameter-tuning"
+            f"{self.prefix}💡 Learn about tuning at https://docs.ultralytics_MB.com/guides/hyperparameter-tuning"
         )
 
     def _mutate(self, parent="single", n=5, mutation=0.8, sigma=0.2):

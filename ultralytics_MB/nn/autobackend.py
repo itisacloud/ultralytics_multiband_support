@@ -150,7 +150,7 @@ class AutoBackend(nn.Module):
             self.model = model  # explicitly assign for to(), cpu(), cuda(), half()
             pt = True
         elif pt:  # PyTorch
-            from ultralytics.nn.tasks import attempt_load_weights
+            from ultralytics_MB.nn.tasks import attempt_load_weights
 
             model = attempt_load_weights(
                 weights if isinstance(weights, list) else w, device=device, inplace=True, fuse=fuse
@@ -284,7 +284,7 @@ class AutoBackend(nn.Module):
             LOGGER.info(f"Loading {w} for TensorFlow GraphDef inference...")
             import tensorflow as tf
 
-            from ultralytics.engine.exporter import gd_outputs
+            from ultralytics_MB.engine.exporter import gd_outputs
 
             def wrap_frozen_graph(gd, inputs, outputs):
                 """Wrap frozen graphs for deployment."""
@@ -364,7 +364,7 @@ class AutoBackend(nn.Module):
 
             raise TypeError(
                 f"model='{w}' is not a supported model format. "
-                "See https://docs.ultralytics.com/modes/predict for help."
+                "See https://docs.ultralytics_MB.com/modes/predict for help."
                 f"\n\n{export_formats()}"
             )
 

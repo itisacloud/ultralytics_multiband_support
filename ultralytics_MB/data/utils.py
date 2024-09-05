@@ -37,7 +37,7 @@ from ultralytics_MB.utils.checks import check_file, check_font, is_ascii
 from ultralytics_MB.utils.downloads import download, safe_download, unzip_file
 from ultralytics_MB.utils.ops import segments2boxes
 
-HELP_URL = "See https://docs.ultralytics.com/datasets/detect for dataset formatting guidance."
+HELP_URL = "See https://docs.ultralytics_MB.com/datasets/detect for dataset formatting guidance."
 IMG_FORMATS = {"bmp", "dng", "jpeg", "jpg", "mpo", "png", "tif", "tiff", "webp", "pfm"}  # image suffixes
 VID_FORMATS = {"asf", "avi", "gif", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "ts", "wmv", "webm"}  # video suffixes
 PIN_MEMORY = str(os.getenv("PIN_MEMORY", True)).lower() == "true"  # global pin_memory for dataloaders

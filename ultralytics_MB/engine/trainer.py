@@ -507,8 +507,8 @@ class BaseTrainer:
             "train_results": results,
             "date": datetime.now().isoformat(),
             "version": __version__,
-            "license": "AGPL-3.0 (https://ultralytics.com/license)",
-            "docs": "https://docs.ultralytics.com",
+            "license": "AGPL-3.0 (https://ultralytics_MB.com/license)",
+            "docs": "https://docs.ultralytics_MB.com",
         }
 
         # Save last and best
@@ -760,7 +760,7 @@ class BaseTrainer:
             raise NotImplementedError(
                 f"Optimizer '{name}' not found in list of available optimizers "
                 f"[Adam, AdamW, NAdam, RAdam, RMSProp, SGD, auto]."
-                "To request support for addition optimizers please visit https://github.com/ultralytics/ultralytics."
+                "To request support for addition optimizers please visit https://github.com/ultralytics/ultralytics_MB."
             )
 
         optimizer.add_param_group({"params": g[0], "weight_decay": decay})  # add g0 with weight_decay

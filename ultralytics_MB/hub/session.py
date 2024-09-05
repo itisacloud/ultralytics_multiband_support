@@ -7,9 +7,9 @@ from pathlib import Path
 
 import requests
 
-from ultralytics.hub.utils import HUB_WEB_ROOT, HELP_MSG, PREFIX, TQDM
-from ultralytics.utils import LOGGER, SETTINGS, __version__, checks, emojis, is_colab
-from ultralytics.utils.errors import HUBModelError
+from ultralytics_MB.hub.utils import HUB_WEB_ROOT, HELP_MSG, PREFIX, TQDM
+from ultralytics_MB.utils import LOGGER, SETTINGS, __version__, checks, emojis, is_colab
+from ultralytics_MB.utils.errors import HUBModelError
 
 AGENT_NAME = f"python-{__version__}-colab" if is_colab() else f"python-{__version__}-local"
 

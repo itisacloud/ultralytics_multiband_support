@@ -62,7 +62,7 @@ CLI_HELP_MSG = f"""
         Where   TASK (optional) is one of {TASKS}
                 MODE (required) is one of {MODES}
                 ARGS (optional) are any number of custom 'arg=value' pairs like 'imgsz=320' that override defaults.
-                    See all ARGS at https://docs.ultralytics.com/usage/cfg or with 'yolo cfg'
+                    See all ARGS at https://docs.ultralytics_MB.com/usage/cfg or with 'yolo cfg'
 
     1. Train a detection model for 10 epochs with an initial learning_rate of 0.01
         yolo train data=coco128.yaml model=yolov8n.pt epochs=10 lr0=0.01
@@ -87,8 +87,8 @@ CLI_HELP_MSG = f"""
         yolo copy-cfg
         yolo cfg
 
-    Docs: https://docs.ultralytics.com
-    Community: https://community.ultralytics.com
+    Docs: https://docs.ultralytics_MB.com
+    Community: https://community.ultralytics_MB.com
     GitHub: https://github.com/ultralytics/ultralytics
     """
 
@@ -389,7 +389,7 @@ def handle_yolo_settings(args: List[str]) -> None:
         python my_script.py yolo settings reset
         ```
     """
-    url = "https://docs.ultralytics.com/quickstart/#ultralytics-settings"  # help URL
+    url = "https://docs.ultralytics_MB.com/quickstart/#ultralytics-settings"  # help URL
     try:
         if any(args):
             if args[0] == "reset":
@@ -582,7 +582,7 @@ def entrypoint(debug=""):
     getattr(model, mode)(**overrides)  # default args from model
 
     # Show help
-    LOGGER.info(f"💡 Learn more at https://docs.ultralytics.com/modes/{mode}")
+    LOGGER.info(f"💡 Learn more at https://docs.ultralytics_MB.com/modes/{mode}")
 
 
 # Special modes --------------------------------------------------------------------------------------------------------

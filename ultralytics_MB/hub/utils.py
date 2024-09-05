@@ -28,8 +28,8 @@ from ultralytics_MB.utils import (
 )
 from ultralytics_MB.utils.downloads import GITHUB_ASSETS_NAMES
 
-HUB_API_ROOT = os.environ.get("ULTRALYTICS_HUB_API", "https://api.ultralytics.com")
-HUB_WEB_ROOT = os.environ.get("ULTRALYTICS_HUB_WEB", "https://hub.ultralytics.com")
+HUB_API_ROOT = os.environ.get("ULTRALYTICS_HUB_API", "https://api.ultralytics_MB.com")
+HUB_WEB_ROOT = os.environ.get("ULTRALYTICS_HUB_WEB", "https://hub.ultralytics_MB.com")
 
 PREFIX = colorstr("Ultralytics HUB: ")
 HELP_MSG = "If this issue persists please visit https://github.com/ultralytics/hub/issues for assistance."
@@ -201,7 +201,7 @@ class Events:
             and RANK in (-1, 0)
             and not TESTS_RUNNING
             and ONLINE
-            and (is_pip_package() or get_git_origin_url() == "https://github.com/ultralytics/ultralytics.git")
+            and (is_pip_package() or get_git_origin_url() == "https://github.com/ultralytics/ultralytics_MB.git")
         )
 
     def __call__(self, cfg):

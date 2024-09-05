@@ -175,11 +175,11 @@ def utralytics_explorer_docs_callback():
             width=100,
         )
         st.markdown(
-            "<p>This demo is built using Ultralytics Explorer API. Visit <a href='https://docs.ultralytics.com/datasets/explorer/'>API docs</a> to try examples & learn more</p>",
+            "<p>This demo is built using Ultralytics Explorer API. Visit <a href='https://docs.ultralytics_MB.com/datasets/explorer/'>API docs</a> to try examples & learn more</p>",
             unsafe_allow_html=True,
             help=None,
         )
-        st.link_button("Ultrlaytics Explorer API", "https://docs.ultralytics.com/datasets/explorer/")
+        st.link_button("Ultrlaytics Explorer API", "https://docs.ultralytics_MB.com/datasets/explorer/")
 
 
 def layout():

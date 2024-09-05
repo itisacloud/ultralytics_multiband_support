@@ -206,7 +206,7 @@ class Exporter:
                 "WARNING ⚠️ YOLOWorld (original version) export is not supported to any format.\n"
                 "WARNING ⚠️ YOLOWorldv2 models (i.e. 'yolov8s-worldv2.pt') only support export to "
                 "(torchscript, onnx, openvino, engine, coreml) formats. "
-                "See https://docs.ultralytics.com/models/yolo-world for details."
+                "See https://docs.ultralytics_MB.com/models/yolo-world for details."
             )
 
         # Input
@@ -261,8 +261,8 @@ class Exporter:
             "author": "Ultralytics",
             "date": datetime.now().isoformat(),
             "version": __version__,
-            "license": "AGPL-3.0 License (https://ultralytics.com/license)",
-            "docs": "https://docs.ultralytics.com",
+            "license": "AGPL-3.0 License (https://ultralytics_MB.com/license)",
+            "docs": "https://docs.ultralytics_MB.com",
             "stride": int(max(model.stride)),
             "task": model.task,
             "batch": self.args.batch,

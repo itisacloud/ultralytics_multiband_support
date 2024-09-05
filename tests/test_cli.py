@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from ultralytics.utils import ASSETS, WEIGHTS_DIR, checks
+from ultralytics_MB.utils import ASSETS, WEIGHTS_DIR, checks
 
 CUDA_IS_AVAILABLE = checks.cuda_is_available()
 CUDA_DEVICE_COUNT = checks.cuda_device_count()
@@ -71,15 +71,15 @@ def test_rtdetr(task="detect", model="yolov8n-rtdetr.yaml", data="coco8.yaml"):
 
 @pytest.mark.skipif(checks.IS_PYTHON_3_12, reason="MobileSAM with CLIP is not supported in Python 3.12")
 def test_fastsam(task="segment", model=WEIGHTS_DIR / "FastSAM-s.pt", data="coco8-seg.yaml"):
-    """Test FastSAM segmentation functionality within Ultralytics."""
+    """Test FastSAM segmentation functionality within ultralytics_MB."""
     source = ASSETS / "bus.jpg"
 
     run(f"yolo segment val {task} model={model} data={data} imgsz=32")
     run(f"yolo segment predict model={model} source={source} imgsz=32 save save_crop save_txt")
 
     from ultralytics import FastSAM
-    from ultralytics.models.fastsam import FastSAMPrompt
-    from ultralytics.models.sam import Predictor
+    from ultralytics_MB.models.fastsam import FastSAMPrompt
+    from ultralytics_MB.models.sam import Predictor
 
     # Create a FastSAM model
     sam_model = FastSAM(model)  # or FastSAM-x.pt
@@ -108,7 +108,7 @@ def test_fastsam(task="segment", model=WEIGHTS_DIR / "FastSAM-s.pt", data="coco8
 
 
 def test_mobilesam():
-    """Test MobileSAM segmentation functionality using Ultralytics."""
+    """Test MobileSAM segmentation functionality using ultralytics_MB."""
     from ultralytics import SAM
 
     # Load the model

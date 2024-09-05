@@ -157,7 +157,7 @@ class Explorer:
             ```python
             exp = Explorer()
             exp.create_embeddings_table()
-            similar = exp.query(img='https://ultralytics.com/images/zidane.jpg')
+            similar = exp.query(img='https://ultralytics_MB.com/images/zidane.jpg')
             ```
         """
         if self.table is None:
@@ -264,7 +264,7 @@ class Explorer:
             ```python
             exp = Explorer()
             exp.create_embeddings_table()
-            similar = exp.get_similar(img='https://ultralytics.com/images/zidane.jpg')
+            similar = exp.get_similar(img='https://ultralytics_MB.com/images/zidane.jpg')
             ```
         """
         assert return_type in {
@@ -302,7 +302,7 @@ class Explorer:
             ```python
             exp = Explorer()
             exp.create_embeddings_table()
-            similar = exp.plot_similar(img='https://ultralytics.com/images/zidane.jpg')
+            similar = exp.plot_similar(img='https://ultralytics_MB.com/images/zidane.jpg')
             ```
         """
         similar = self.get_similar(img, idx, limit, return_type="arrow")
