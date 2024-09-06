@@ -52,10 +52,9 @@ from .block import (
     RepNCSPELAN4,
     RepVGGDW,
     ResNetLayer,
-    SCDown,
+    SCDown, Input,
 )
 from .conv import (
-    Input,
     FeatureFusionBlock,
     CBAM,
     ChannelAttention,
@@ -86,7 +85,6 @@ from .transformer import (
 )
 
 __all__ = (
-    "Input",
     "FeatureFusionBlock",
     "Conv",
     "Conv2",

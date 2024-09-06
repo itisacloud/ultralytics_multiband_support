@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn as nn
 
 from ultralytics_MB.utils.torch_utils import fuse_conv_and_bn
 
@@ -47,6 +48,8 @@ __all__ = (
     "PSA",
     "SCDown",
 )
+
+from ...utils import LOGGER
 
 
 class DFL(nn.Module):
@@ -958,3 +961,20 @@ class SCDown(nn.Module):
             (torch.Tensor): Output tensor after applying the SCDown module.
         """
         return self.cv2(self.cv1(x))
+
+
+class Input(nn.Module):
+    """Input layer."""
+    #forwards either the first three channels or the last three channels of the input tensor
+    def __init__(self,input=[0,1,2]):
+        self.input = input
+        super().__init__()
+    def forward(self,x):
+        if type(self.input) == int:
+            self.input = [0,1,2] if self.input else [3,4,5]
+            LOGGER.warning("Supporting, former style")
+        if len(x.shape) == 4:
+            # x = [x,y,bands]
+            return x[:,self.input,:,:]
+        else: #unbatched
+            return x[self.input,:,:]
