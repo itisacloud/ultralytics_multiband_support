@@ -184,6 +184,7 @@ class DetectionTrainer(BaseTrainer):
             paths=batch["im_file"],
             fname=self.save_dir / f"train_batch{ni}.jpg",
             on_plot=self.on_plot,
+            channels = self.args.channels
         )
 
     def plot_metrics(self):
