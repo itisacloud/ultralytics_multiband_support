@@ -533,7 +533,7 @@ class RTDETRDetectionModel(DetectionModel):
             self.criterion = self.init_criterion()
 
         img = batch["img"]
-        # NOTE: preprocess gt_bbox and gt_labels to list.
+        # NOTE: rocess gt_bbox and gt_labels to list.
         bs = len(img)
         batch_idx = batch["batch_idx"]
         gt_groups = [(batch_idx == i).sum().item() for i in range(bs)]
@@ -893,7 +893,6 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             scale = tuple(scales.keys())[0]
             LOGGER.warning(f"WARNING ⚠️ no model scale passed. Assuming scale='{scale}'.")
         depth, width, max_channels = scales[scale]
-
     if act:
         Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
         if verbose:
@@ -903,10 +902,12 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
-    sync_layers = d.get("sync",[])
+    sync_layers = d.get("synchronize",[])
     if not d.get("siamese", False):
-
+        print("disabled synchronize")
         sync_layers = []
+    else:
+        print("enabled synchronize")
 
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]
@@ -1008,8 +1009,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if i in [x[1] for x in sync_layers]:
             original = [x[0] for x in sync_layers if x[1] == i][0]
             m_ = layers[original]
+            print(f"synced layers {i} and {original }")
             # sync with previous layer
-
+        print(sync_layers)
         layers.append(m_)
 
         if i == 0:

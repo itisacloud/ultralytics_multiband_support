@@ -9,7 +9,7 @@ siamese: True
 scales: # model compound scaling constants, i.e. 'model=yolov10n.yaml' will call yolov10.yaml with scale 'n'
   # [depth, width, max_channels]
   x: [1.00, 1.25, 512]
-
+synchronize: [[2,14],[3,15],[4,16],[5,17],[6,18],[7,19],[8,20],[9,21],[10,22],[11,23],[12,24]]
 
 
 backbone:
