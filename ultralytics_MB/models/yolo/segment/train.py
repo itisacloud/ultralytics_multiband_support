@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from copy import copy
 
@@ -16,7 +16,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
         ```python
         from ultralytics_MB.models.yolo.segment import SegmentationTrainer
 
-        args = dict(model='yolov8n-seg.pt', data='coco8-seg.yaml', epochs=3)
+        args = dict(model="yolov8n-seg.pt", data="coco8-seg.yaml", epochs=3)
         trainer = SegmentationTrainer(overrides=args)
         trainer.train()
         ```

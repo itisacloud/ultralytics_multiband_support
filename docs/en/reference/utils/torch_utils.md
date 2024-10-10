@@ -5,7 +5,7 @@ keywords: Ultralytics, Torch Utils, Model EMA, Early Stopping, Smart Inference, 
 
 # Reference for `ultralytics/utils/torch_utils.py`
 
-!!! Note
+!!! note
 
     This file is available at [https://github.com/ultralytics/ultralytics/blob/main/ultralytics/utils/torch_utils.py](https://github.com/ultralytics/ultralytics/blob/main/ultralytics/utils/torch_utils.py). If you spot a problem please help fix it by [contributing](https://docs.ultralytics.com/help/contributing/) a [Pull Request](https://github.com/ultralytics/ultralytics/edit/main/ultralytics/utils/torch_utils.py) 🛠️. Thank you 🙏!
 
@@ -30,6 +30,10 @@ keywords: Ultralytics, Torch Utils, Model EMA, Early Stopping, Smart Inference, 
 ## ::: ultralytics.utils.torch_utils.get_cpu_info
 
 <br><br>
+
+## ::: ultralytics.utils.torch_utils.get_gpu_info
+
+<br><br><hr><br>
 
 ## ::: ultralytics.utils.torch_utils.select_device
 

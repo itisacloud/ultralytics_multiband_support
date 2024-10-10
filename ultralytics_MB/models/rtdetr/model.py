@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 """
 Interface for Baidu's RT-DETR, a Vision Transformer-based real-time object detector. RT-DETR offers real-time
 performance and high accuracy, excelling in accelerated backends like CUDA with TensorRT. It features an efficient
@@ -43,10 +43,10 @@ class RTDETR(Model):
     @property
     def task_map(self) -> dict:
         """
-        Returns a task map for RT-DETR, associating tasks with corresponding Ultralytics classes.
+        Returns a task map for RT-DETR, associating tasks with corresponding ultralytics_MB classes.
 
         Returns:
-            dict: A dictionary mapping task names to Ultralytics task classes for the RT-DETR model.
+            dict: A dictionary mapping task names to ultralytics_MB task classes for the RT-DETR model.
         """
         return {
             "detect": {

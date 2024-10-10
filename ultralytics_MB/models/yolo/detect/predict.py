@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from ultralytics_MB.engine.predictor import BasePredictor
 from ultralytics_MB.engine.results import Results
@@ -14,7 +14,7 @@ class DetectionPredictor(BasePredictor):
         from ultralytics_MB.utils import ASSETS
         from ultralytics_MB.models.yolo.detect import DetectionPredictor
 
-        args = dict(model='yolov8n.pt', source=ASSETS)
+        args = dict(model="yolov8n.pt", source=ASSETS)
         predictor = DetectionPredictor(overrides=args)
         predictor.predict_cli()
         ```

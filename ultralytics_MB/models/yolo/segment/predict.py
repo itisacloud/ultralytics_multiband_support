@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from ultralytics_MB.engine.results import Results
 from ultralytics_MB.models.yolo.detect.predict import DetectionPredictor
@@ -14,7 +14,7 @@ class SegmentationPredictor(DetectionPredictor):
         from ultralytics_MB.utils import ASSETS
         from ultralytics_MB.models.yolo.segment import SegmentationPredictor
 
-        args = dict(model='yolov8n-seg.pt', source=ASSETS)
+        args = dict(model="yolov8n-seg.pt", source=ASSETS)
         predictor = SegmentationPredictor(overrides=args)
         predictor.predict_cli()
         ```

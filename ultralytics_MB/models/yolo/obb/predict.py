@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import torch
 
@@ -16,7 +16,7 @@ class OBBPredictor(DetectionPredictor):
         from ultralytics_MB.utils import ASSETS
         from ultralytics_MB.models.yolo.obb import OBBPredictor
 
-        args = dict(model='yolov8n-obb.pt', source=ASSETS)
+        args = dict(model="yolov8n-obb.pt", source=ASSETS)
         predictor = OBBPredictor(overrides=args)
         predictor.predict_cli()
         ```

@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import inspect
 from pathlib import Path
@@ -7,6 +7,7 @@ from typing import List, Union
 import numpy as np
 import torch
 import numpy as np
+from PIL import Image
 
 from ultralytics_MB.cfg import TASK2DATA, get_cfg, get_save_dir
 from ultralytics_MB.engine.results import Results
@@ -32,7 +33,7 @@ class Model(nn.Module):
 
     This class provides a common interface for various operations related to YOLO models, such as training,
     validation, prediction, exporting, and benchmarking. It handles different types of models, including those
-    loaded from local files, Ultralytics HUB, or Triton Server.
+    loaded from local files, ultralytics_MB HUB, or Triton Server.
 
     Attributes:
         callbacks (Dict): A dictionary of callback functions for various events during model operations.
@@ -44,7 +45,7 @@ class Model(nn.Module):
         ckpt_path (str): The path to the checkpoint file.
         overrides (Dict): A dictionary of overrides for model configuration.
         metrics (Dict): The latest training/validation metrics.
-        session (HUBTrainingSession): The Ultralytics HUB session, if applicable.
+        session (HUBTrainingSession): The ultralytics_MB HUB session, if applicable.
         task (str): The type of task the model is intended for.
         model_name (str): The name of the model.
 
@@ -71,12 +72,12 @@ class Model(nn.Module):
         reset_callbacks: Resets all callbacks to their default functions.
 
     Examples:
-        >>> from ultralytics import YOLO
-        >>> model = YOLO('yolov8n.pt')
-        >>> results = model.predict('image.jpg')
-        >>> model.train(data='coco128.yaml', epochs=3)
+        >>> from ultralytics_MB import YOLO
+        >>> model = YOLO("yolov8n.pt")
+        >>> results = model.predict("image.jpg")
+        >>> model.train(data="coco128.yaml", epochs=3)
         >>> metrics = model.val()
-        >>> model.export(format='onnx')
+        >>> model.export(format="onnx")
     """
 
     def __init__(self, model: Union[str, Path] = "yolov8n.pt", task=None, verbose=False) -> None:
@@ -84,13 +85,13 @@ class Model(nn.Module):
         Initializes a new instance of the YOLO model class.
 
         This constructor sets up the model based on the provided model path or name. It handles various types of
-        model sources, including local files, Ultralytics HUB models, and Triton Server models. The method
+        model sources, including local files, ultralytics_MB HUB models, and Triton Server models. The method
         initializes several important attributes of the model and prepares it for operations like training,
         prediction, or export.
 
         Args:
             model (Union[str, Path]): Path or name of the model to load or create. Can be a local file path, a
-                model name from Ultralytics HUB, or a Triton Server model.
+                model name from ultralytics_MB HUB, or a Triton Server model.
             task (str | None): The task type associated with the YOLO model, specifying its application domain.
             verbose (bool): If True, enables verbose output during the model's initialization and subsequent
                 operations.
@@ -119,12 +120,14 @@ class Model(nn.Module):
         self.task = task  # task type
         model = str(model).strip()
 
-        # Check if Ultralytics HUB model from https://hub.ultralytics_MB.com
+        # Check if ultralytics_MB HUB model from https://hub.ultralytics_MB.com
         if self.is_hub_model(model):
             # Fetch model from HUB
-            checks.check_requirements("hub-sdk>=0.0.8")
-            self.session = HUBTrainingSession.create_session(model)
-            model = self.session.model_file
+            checks.check_requirements("hub-sdk>=0.0.12")
+            session = HUBTrainingSession.create_session(model)
+            model = session.model_file
+            if session.train_args:  # training sent from HUB
+                self.session = session
 
         # Check if Triton Server model
         elif self.is_triton_model(model):
@@ -141,7 +144,7 @@ class Model(nn.Module):
 
     def __call__(
         self,
-        source: Union[str, Path, int, list, tuple, np.ndarray, torch.Tensor] = None,
+        source: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor] = None,
         stream: bool = False,
         **kwargs,
     ) -> list:
@@ -194,9 +197,9 @@ class Model(nn.Module):
             (bool): True if the model string is a valid Triton Server URL, False otherwise.
 
         Examples:
-            >>> Model.is_triton_model('http://localhost:8000/v2/models/yolov8n')
+            >>> Model.is_triton_model("http://localhost:8000/v2/models/yolov8n")
             True
-            >>> Model.is_triton_model('yolov8n.pt')
+            >>> Model.is_triton_model("yolov8n.pt")
             False
         """
         from urllib.parse import urlsplit
@@ -207,36 +210,26 @@ class Model(nn.Module):
     @staticmethod
     def is_hub_model(model: str) -> bool:
         """
-        Check if the provided model is an Ultralytics HUB model.
+        Check if the provided model is an ultralytics_MB HUB model.
 
-        This static method determines whether the given model string represents a valid Ultralytics HUB model
-        identifier. It checks for three possible formats: a full HUB URL, an API key and model ID combination,
-        or a standalone model ID.
+        This static method determines whether the given model string represents a valid ultralytics_MB HUB model
+        identifier.
 
         Args:
-            model (str): The model identifier to check. This can be a URL, an API key and model ID
-                combination, or a standalone model ID.
+            model (str): The model string to check.
 
         Returns:
-            (bool): True if the model is a valid Ultralytics HUB model, False otherwise.
+            (bool): True if the model is a valid ultralytics_MB HUB model, False otherwise.
 
         Examples:
             >>> Model.is_hub_model("https://hub.ultralytics_MB.com/models/example_model")
             True
             >>> Model.is_hub_model("api_key_example_model_id")
             True
-            >>> Model.is_hub_model("example_model_id")
-            True
-            >>> Model.is_hub_model("not_a_hub_model.pt")
+            >>> Model.is_hub_model("yolov8n.pt")
             False
         """
-        return any(
-            (
-                model.startswith(f"{HUB_WEB_ROOT}/models/"),  # i.e. https://hub.ultralytics_MB.com/models/MODEL_ID
-                [len(x) for x in model.split("_")] == [42, 20],  # APIKEY_MODEL
-                len(model) == 20 and not Path(model).exists() and all(x not in model for x in "./\\"),  # MODEL
-            )
-        )
+        return model.startswith(f"{HUB_WEB_ROOT}/models/")
 
     def _new(self, cfg: str, task=None, model=None, verbose=False) -> None:
         """
@@ -259,7 +252,7 @@ class Model(nn.Module):
 
         Examples:
             >>> model = Model()
-            >>> model._new('yolov8n.yaml', task='detect', verbose=True)
+            >>> model._new("yolov8n.yaml", task="detect", verbose=True)
         """
         cfg_dict = yaml_model_load(cfg)
         self.cfg = cfg
@@ -290,8 +283,8 @@ class Model(nn.Module):
 
         Examples:
             >>> model = Model()
-            >>> model._load('yolov8n.pt')
-            >>> model._load('path/to/weights.pth', task='detect')
+            >>> model._load("yolov8n.pt")
+            >>> model._load("path/to/weights.pth", task="detect")
         """
         if weights.lower().startswith(("https://", "http://", "rtsp://", "rtmp://", "tcp://")):
             weights = checks.check_file(weights, download_dir=SETTINGS["weights_dir"])  # download and return local file
@@ -354,7 +347,7 @@ class Model(nn.Module):
             AssertionError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = Model('yolov8n.pt')
+            >>> model = Model("yolov8n.pt")
             >>> model.reset_weights()
         """
         self._check_is_pytorch_model()
@@ -383,38 +376,38 @@ class Model(nn.Module):
 
         Examples:
             >>> model = Model()
-            >>> model.load('yolov8n.pt')
-            >>> model.load(Path('path/to/weights.pt'))
+            >>> model.load("yolov8n.pt")
+            >>> model.load(Path("path/to/weights.pt"))
         """
         self._check_is_pytorch_model()
         if isinstance(weights, (str, Path)):
+            self.overrides["pretrained"] = weights  # remember the weights for DDP training
             weights, self.ckpt = attempt_load_one_weight(weights)
         self.model.load(weights)
         return self
 
-    def save(self, filename: Union[str, Path] = "saved_model.pt", use_dill=True) -> None:
+    def save(self, filename: Union[str, Path] = "saved_model.pt") -> None:
         """
         Saves the current model state to a file.
 
         This method exports the model's checkpoint (ckpt) to the specified filename. It includes metadata such as
-        the date, Ultralytics version, license information, and a link to the documentation.
+        the date, ultralytics_MB version, license information, and a link to the documentation.
 
         Args:
             filename (Union[str, Path]): The name of the file to save the model to.
-            use_dill (bool): Whether to try using dill for serialization if available.
 
         Raises:
             AssertionError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = Model('yolov8n.pt')
-            >>> model.save('my_model.pt')
+            >>> model = Model("yolov8n.pt")
+            >>> model.save("my_model.pt")
         """
         self._check_is_pytorch_model()
-        from ultralytics import __version__
+        from ultralytics_MB import __version__
         from datetime import datetime
 
-        from ultralytics import __version__
+        from ultralytics_MB import __version__
 
         updates = {
             "model": deepcopy(self.model).half() if isinstance(self.model, nn.Module) else self.model,
@@ -423,7 +416,7 @@ class Model(nn.Module):
             "license": "AGPL-3.0 License (https://ultralytics_MB.com/license)",
             "docs": "https://docs.ultralytics_MB.com",
         }
-        torch.save({**self.ckpt, **updates}, filename, use_dill=use_dill)
+        torch.save({**self.ckpt, **updates}, filename)
 
     def info(self, detailed: bool = False, verbose: bool = True):
         """
@@ -444,7 +437,7 @@ class Model(nn.Module):
             TypeError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = Model('yolov8n.pt')
+            >>> model = Model("yolov8n.pt")
             >>> model.info()  # Prints model summary
             >>> info_list = model.info(detailed=True, verbose=False)  # Returns detailed info as a list
         """
@@ -505,7 +498,7 @@ class Model(nn.Module):
 
     def predict(
         self,
-        source: Union[str, Path, int, list, tuple, np.ndarray, torch.Tensor] = None,
+        source: Union[str, Path, int, Image.Image, list, tuple, np.ndarray, torch.Tensor] = None,
         stream: bool = False,
         predictor=None,
         **kwargs,
@@ -518,7 +511,7 @@ class Model(nn.Module):
         types of image sources and can operate in a streaming mode.
 
         Args:
-            source (str | Path | int | List[str] | List[Path] | List[int] | np.ndarray | torch.Tensor): The source
+            source (str | Path | int | PIL.Image | np.ndarray | torch.Tensor | List | Tuple): The source
                 of the image(s) to make predictions on. Accepts various types including file paths, URLs, PIL
                 images, numpy arrays, and torch tensors.
             stream (bool): If True, treats the input source as a continuous stream for predictions.
@@ -531,8 +524,8 @@ class Model(nn.Module):
                 Results object.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> results = model.predict(source='path/to/image.jpg', conf=0.25)
+            >>> model = YOLO("yolov8n.pt")
+            >>> results = model.predict(source="path/to/image.jpg", conf=0.25)
             >>> for r in results:
             ...     print(r.boxes.data)  # print detection bounding boxes
 
@@ -554,7 +547,7 @@ class Model(nn.Module):
         prompts = args.pop("prompts", None)  # for SAM-type models
 
         if not self.predictor:
-            self.predictor = predictor or self._smart_load("predictor")(overrides=args, _callbacks=self.callbacks)
+            self.predictor = (predictor or self._smart_load("predictor"))(overrides=args, _callbacks=self.callbacks)
             self.predictor.setup_model(model=self.model, verbose=is_cli)
         else:  # only update args if predictor is already setup
             self.predictor.args = get_cfg(self.predictor.args, args)
@@ -592,8 +585,8 @@ class Model(nn.Module):
             AttributeError: If the predictor does not have registered trackers.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> results = model.track(source='path/to/video.mp4', show=True)
+            >>> model = YOLO("yolov8n.pt")
+            >>> results = model.track(source="path/to/video.mp4", show=True)
             >>> for r in results:
             ...     print(r.boxes.id)  # print tracking IDs
 
@@ -630,8 +623,8 @@ class Model(nn.Module):
             AssertionError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> results = model.val(data='coco128.yaml', imgsz=640)
+            >>> model = YOLO("yolov8n.pt")
+            >>> results = model.val(data="coco128.yaml", imgsz=640)
             >>> print(results.box.map)  # Print mAP50-95
         """
         custom = {"rect": True}  # method defaults
@@ -669,8 +662,8 @@ class Model(nn.Module):
             AssertionError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> results = model.benchmark(data='coco8.yaml', imgsz=640, half=True)
+            >>> model = YOLO("yolov8n.pt")
+            >>> results = model.benchmark(data="coco8.yaml", imgsz=640, half=True)
             >>> print(results)
         """
         self._check_is_pytorch_model()
@@ -719,8 +712,8 @@ class Model(nn.Module):
             RuntimeError: If the export process fails due to errors.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> model.export(format='onnx', dynamic=True, simplify=True)
+            >>> model = YOLO("yolov8n.pt")
+            >>> model.export(format="onnx", dynamic=True, simplify=True)
             'path/to/exported/model.onnx'
         """
         self._check_is_pytorch_model()
@@ -742,9 +735,9 @@ class Model(nn.Module):
 
         This method facilitates model training with a range of customizable settings. It supports training with a
         custom trainer or the default training approach. The method handles scenarios such as resuming training
-        from a checkpoint, integrating with Ultralytics HUB, and updating model and configuration after training.
+        from a checkpoint, integrating with ultralytics_MB HUB, and updating model and configuration after training.
 
-        When using Ultralytics HUB, if the session has a loaded model, the method prioritizes HUB training
+        When using ultralytics_MB HUB, if the session has a loaded model, the method prioritizes HUB training
         arguments and warns if local arguments are provided. It checks for pip updates and combines default
         configurations, method-specific defaults, and user-provided arguments to configure the training process.
 
@@ -770,11 +763,11 @@ class Model(nn.Module):
             ModuleNotFoundError: If the HUB SDK is not installed.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> results = model.train(data='coco128.yaml', epochs=3)
+            >>> model = YOLO("yolov8n.pt")
+            >>> results = model.train(data="coco128.yaml", epochs=3)
         """
         self._check_is_pytorch_model()
-        if hasattr(self.session, "model") and self.session.model.id:  # Ultralytics HUB session with loaded model
+        if hasattr(self.session, "model") and self.session.model.id:  # ultralytics_MB HUB session with loaded model
             if any(kwargs):
                 LOGGER.warning("WARNING ⚠️ using HUB training arguments, ignoring local training arguments.")
             kwargs = self.session.train_args  # overwrite kwargs
@@ -829,7 +822,7 @@ class Model(nn.Module):
             AssertionError: If the model is not a PyTorch model.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
+            >>> model = YOLO("yolov8n.pt")
             >>> results = model.tune(use_ray=True, iterations=20)
             >>> print(results)
         """
@@ -862,15 +855,15 @@ class Model(nn.Module):
         using the 'check_class_names' function from the ultralytics_MB.nn.autobackend module.
 
         Returns:
-            (List[str]): A list of class names associated with the model.
+            (Dict[int, str]): A dict of class names associated with the model.
 
         Raises:
             AttributeError: If the model or predictor does not have a 'names' attribute.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
+            >>> model = YOLO("yolov8n.pt")
             >>> print(model.names)
-            ['person', 'bicycle', 'car', ...]
+            {0: 'person', 1: 'bicycle', 2: 'car', ...}
         """
         from ultralytics_MB.nn.autobackend import check_class_names
 
@@ -918,7 +911,7 @@ class Model(nn.Module):
             (object | None): The transform object of the model if available, otherwise None.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
+            >>> model = YOLO("yolov8n.pt")
             >>> transforms = model.transforms
             >>> if transforms:
             ...     print(f"Model transforms: {transforms}")
@@ -937,7 +930,7 @@ class Model(nn.Module):
 
         Args:
             event (str): The name of the event to attach the callback to. Must be a valid event name recognized
-                by the Ultralytics framework.
+                by the ultralytics_MB framework.
             func (Callable): The callback function to be registered. This function will be called when the
                 specified event occurs.
 
@@ -947,9 +940,9 @@ class Model(nn.Module):
         Examples:
             >>> def on_train_start(trainer):
             ...     print("Training is starting!")
-            >>> model = YOLO('yolov8n.pt')
+            >>> model = YOLO("yolov8n.pt")
             >>> model.add_callback("on_train_start", on_train_start)
-            >>> model.train(data='coco128.yaml', epochs=1)
+            >>> model.train(data="coco128.yaml", epochs=1)
         """
         self.callbacks[event].append(func)
 
@@ -963,17 +956,17 @@ class Model(nn.Module):
 
         Args:
             event (str): The name of the event for which to clear the callbacks. This should be a valid event name
-                recognized by the Ultralytics callback system.
+                recognized by the ultralytics_MB callback system.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> model.add_callback('on_train_start', lambda: print('Training started'))
-            >>> model.clear_callback('on_train_start')
+            >>> model = YOLO("yolov8n.pt")
+            >>> model.add_callback("on_train_start", lambda: print("Training started"))
+            >>> model.clear_callback("on_train_start")
             >>> # All callbacks for 'on_train_start' are now removed
 
         Notes:
             - This method affects both custom callbacks added by the user and default callbacks
-              provided by the Ultralytics framework.
+              provided by the ultralytics_MB framework.
             - After calling this method, no callbacks will be executed for the specified event
               until new ones are added.
             - Use with caution as it removes all callbacks, including essential ones that might
@@ -996,8 +989,8 @@ class Model(nn.Module):
         modifications, ensuring consistent behavior across different runs or experiments.
 
         Examples:
-            >>> model = YOLO('yolov8n.pt')
-            >>> model.add_callback('on_train_start', custom_function)
+            >>> model = YOLO("yolov8n.pt")
+            >>> model.add_callback("on_train_start", custom_function)
             >>> model.reset_callbacks()
             # All callbacks are now reset to their default functions
         """
@@ -1020,7 +1013,7 @@ class Model(nn.Module):
             (dict): A new dictionary containing only the specified include keys from the input arguments.
 
         Examples:
-            >>> original_args = {'imgsz': 640, 'data': 'coco.yaml', 'task': 'detect', 'batch': 16, 'epochs': 100}
+            >>> original_args = {"imgsz": 640, "data": "coco.yaml", "task": "detect", "batch": 16, "epochs": 100}
             >>> reset_args = Model._reset_ckpt_args(original_args)
             >>> print(reset_args)
             {'imgsz': 640, 'data': 'coco.yaml', 'task': 'detect'}
@@ -1051,9 +1044,9 @@ class Model(nn.Module):
             NotImplementedError: If the specified key is not supported for the current task.
 
         Examples:
-            >>> model = Model(task='detect')
-            >>> predictor = model._smart_load('predictor')
-            >>> trainer = model._smart_load('trainer')
+            >>> model = Model(task="detect")
+            >>> predictor = model._smart_load("predictor")
+            >>> trainer = model._smart_load("trainer")
 
         Notes:
             - This method is typically used internally by other methods of the Model class.
@@ -1079,7 +1072,7 @@ class Model(nn.Module):
 
         The mapping allows for dynamic loading of appropriate classes based on the model's task and the
         desired operational mode. This facilitates a flexible and extensible architecture for handling
-        various tasks and modes within the Ultralytics framework.
+        various tasks and modes within the ultralytics_MB framework.
 
         Returns:
             (Dict[str, Dict[str, Any]]): A dictionary where keys are task names (str) and values are
@@ -1089,12 +1082,12 @@ class Model(nn.Module):
         Examples:
             >>> model = Model()
             >>> task_map = model.task_map
-            >>> detect_class_map = task_map['detect']
-            >>> segment_class_map = task_map['segment']
+            >>> detect_class_map = task_map["detect"]
+            >>> segment_class_map = task_map["segment"]
 
         Note:
             The actual implementation of this method may vary depending on the specific tasks and
-            classes supported by the Ultralytics framework. The docstring provides a general
+            classes supported by the ultralytics_MB framework. The docstring provides a general
             description of the expected behavior and structure.
         """
         raise NotImplementedError("Please provide task map for your model!")

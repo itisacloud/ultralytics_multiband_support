@@ -1,16 +1,31 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import requests
 
 from ultralytics_MB.data.utils import HUBDatasetStats
 from ultralytics_MB.hub.auth import Auth
-from ultralytics_MB.hub.utils import HUB_API_ROOT, HUB_WEB_ROOT, PREFIX
+from ultralytics_MB.hub.session import HUBTrainingSession
+from ultralytics_MB.hub.utils import HUB_API_ROOT, HUB_WEB_ROOT, PREFIX, events
 from ultralytics_MB.utils import LOGGER, SETTINGS, checks
+
+__all__ = (
+    "PREFIX",
+    "HUB_WEB_ROOT",
+    "HUBTrainingSession",
+    "login",
+    "logout",
+    "reset_model",
+    "export_fmts_hub",
+    "export_model",
+    "get_export",
+    "check_dataset",
+    "events",
+)
 
 
 def login(api_key: str = None, save=True) -> bool:
     """
-    Log in to the Ultralytics HUB API using the provided API key.
+    Log in to the ultralytics_MB HUB API using the provided API key.
 
     The session is not stored; a new session is created when needed using the saved SETTINGS or the HUB_API_KEY
     environment variable if successfully authenticated.
@@ -23,7 +38,7 @@ def login(api_key: str = None, save=True) -> bool:
     Returns:
         (bool): True if authentication is successful, False otherwise.
     """
-    checks.check_requirements("hub-sdk>=0.0.6")
+    checks.check_requirements("hub-sdk>=0.0.12")
     from hub_sdk import HUBClient
 
     api_key_url = f"{HUB_WEB_ROOT}/settings?tab=api+keys"  # set the redirect URL
@@ -54,7 +69,7 @@ def login(api_key: str = None, save=True) -> bool:
 
 def logout():
     """
-    Log out of Ultralytics HUB by removing the API key from the settings file. To log in again, use 'yolo hub login'.
+    Log out of ultralytics_MB HUB by removing the API key from the settings file. To log in again, use 'yolo hub login'.
 
     Example:
         ```python
@@ -64,7 +79,6 @@ def logout():
         ```
     """
     SETTINGS["api_key"] = ""
-    SETTINGS.save()
     LOGGER.info(f"{PREFIX}logged out ✅. To log in again, use 'yolo hub login'.")
 
 
@@ -106,22 +120,26 @@ def get_export(model_id="", format="torchscript"):
     return r.json()
 
 
-def check_dataset(path="", task="detect"):
+def check_dataset(path: str, task: str) -> None:
     """
     Function for error-checking HUB dataset Zip file before upload. It checks a dataset for errors before it is uploaded
     to the HUB. Usage examples are given below.
 
     Args:
-        path (str, optional): Path to data.zip (with data.yaml inside data.zip). Defaults to ''.
-        task (str, optional): Dataset task. Options are 'detect', 'segment', 'pose', 'classify'. Defaults to 'detect'.
+        path (str): Path to data.zip (with data.yaml inside data.zip).
+        task (str): Dataset task. Options are 'detect', 'segment', 'pose', 'classify', 'obb'.
 
     Example:
+        Download *.zip files from https://github.com/ultralytics/hub/tree/main/example_datasets
+            i.e. https://github.com/ultralytics/hub/raw/main/example_datasets/coco8.zip for coco8.zip.
         ```python
         from ultralytics_MB.hub import check_dataset
 
-        check_dataset('path/to/coco8.zip', task='detect')  # detect dataset
-        check_dataset('path/to/coco8-seg.zip', task='segment')  # segment dataset
-        check_dataset('path/to/coco8-pose.zip', task='pose')  # pose dataset
+        check_dataset("path/to/coco8.zip", task="detect")  # detect dataset
+        check_dataset("path/to/coco8-seg.zip", task="segment")  # segment dataset
+        check_dataset("path/to/coco8-pose.zip", task="pose")  # pose dataset
+        check_dataset("path/to/dota8.zip", task="obb")  # OBB dataset
+        check_dataset("path/to/imagenet10.zip", task="classify")  # classification dataset
         ```
     """
     HUBDatasetStats(path=path, task=task).get_json()

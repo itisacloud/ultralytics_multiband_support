@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import argparse
 from collections import defaultdict
@@ -40,7 +40,7 @@ def mouse_callback(event, x, y, flags, param):
     """
     Handles mouse events for region manipulation.
 
-    Parameters:
+    Args:
         event (int): The mouse event type (e.g., cv2.EVENT_LBUTTONDOWN).
         x (int): The x-coordinate of the mouse pointer.
         y (int): The y-coordinate of the mouse pointer.
@@ -205,9 +205,9 @@ def run(
 
         if view_img:
             if vid_frame_count == 1:
-                cv2.namedWindow("Ultralytics YOLOv8 Region Counter Movable")
-                cv2.setMouseCallback("Ultralytics YOLOv8 Region Counter Movable", mouse_callback)
-            cv2.imshow("Ultralytics YOLOv8 Region Counter Movable", frame)
+                cv2.namedWindow("ultralytics_MB YOLOv8 Region Counter Movable")
+                cv2.setMouseCallback("ultralytics_MB YOLOv8 Region Counter Movable", mouse_callback)
+            cv2.imshow("ultralytics_MB YOLOv8 Region Counter Movable", frame)
 
         if save_img:
             video_writer.write(frame)

@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 """Activation modules."""
 
 import torch
@@ -18,5 +18,4 @@ class AGLU(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the forward pass of the Unified activation function."""
         lam = torch.clamp(self.lambd, min=0.0001)
-        y = torch.exp((1 / lam) * self.act((self.kappa * x) - torch.log(lam)))
-        return y  # for AGLU simply return y * input
+        return torch.exp((1 / lam) * self.act((self.kappa * x) - torch.log(lam)))

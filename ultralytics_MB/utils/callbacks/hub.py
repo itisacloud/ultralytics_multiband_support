@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import json
 from time import time
@@ -45,7 +45,7 @@ def on_fit_epoch_end(trainer):
 
 
 def on_model_save(trainer):
-    """Saves checkpoints to Ultralytics HUB with rate limiting."""
+    """Saves checkpoints to ultralytics_MB HUB with rate limiting."""
     session = getattr(trainer, "hub_session", None)
     if session:
         # Upload checkpoints with rate limiting
@@ -57,7 +57,7 @@ def on_model_save(trainer):
 
 
 def on_train_end(trainer):
-    """Upload final model and metrics to Ultralytics HUB at the end of training."""
+    """Upload final model and metrics to ultralytics_MB HUB at the end of training."""
     session = getattr(trainer, "hub_session", None)
     if session:
         # Upload final model and metrics with exponential standoff

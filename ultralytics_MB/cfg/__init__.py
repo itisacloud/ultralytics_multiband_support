@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import contextlib
 import shutil
@@ -13,18 +13,20 @@ from ultralytics_MB.utils import (
     DEFAULT_CFG,
     DEFAULT_CFG_DICT,
     DEFAULT_CFG_PATH,
+    IS_VSCODE,
     LOGGER,
     RANK,
     ROOT,
     RUNS_DIR,
     SETTINGS,
-    SETTINGS_YAML,
+    SETTINGS_FILE,
     TESTS_RUNNING,
     IterableSimpleNamespace,
     __version__,
     checks,
     colorstr,
     deprecation_warn,
+    vscode_msg,
     yaml_load,
     yaml_print,
 )
@@ -40,11 +42,11 @@ TASK2DATA = {
     "obb": "dota8.yaml",
 }
 TASK2MODEL = {
-    "detect": "yolov8n.pt",
-    "segment": "yolov8n-seg.pt",
-    "classify": "yolov8n-cls.pt",
-    "pose": "yolov8n-pose.pt",
-    "obb": "yolov8n-obb.pt",
+    "detect": "yolo11n.pt",
+    "segment": "yolo11n-seg.pt",
+    "classify": "yolo11n-cls.pt",
+    "pose": "yolo11n-pose.pt",
+    "obb": "yolo11n-obb.pt",
 }
 TASK2METRIC = {
     "detect": "metrics/mAP50-95(B)",
@@ -55,7 +57,7 @@ TASK2METRIC = {
 }
 
 CLI_HELP_MSG = f"""
-    Arguments received: {str(['yolo'] + sys.argv[1:])}. Ultralytics 'yolo' commands use the following syntax:
+    Arguments received: {str(['yolo'] + sys.argv[1:])}. ultralytics_MB 'yolo' commands use the following syntax:
 
         yolo TASK MODE ARGS
 
@@ -68,15 +70,15 @@ CLI_HELP_MSG = f"""
         yolo train data=coco128.yaml model=yolov8n.pt epochs=10 lr0=0.01
 
     2. Predict a YouTube video using a pretrained segmentation model at image size 320:
-        yolo predict model=yolov8n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320
+        yolo predict model=yolo11n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320
 
     3. Val a pretrained detection model at batch-size 1 and image size 640:
         yolo val model=yolov8n.pt data=coco128.yaml batch=1 imgsz=640
 
-    4. Export a YOLOv8n classification model to ONNX format at image size 224 by 128 (no TASK required)
-        yolo export model=yolov8n-cls.pt format=onnx imgsz=224,128
+    4. Export a YOLO11n classification model to ONNX format at image size 224 by 128 (no TASK required)
+        yolo export model=yolo11n-cls.pt format=onnx imgsz=224,128
 
-    6. Explore your datasets using semantic search and SQL with a simple GUI powered by Ultralytics Explorer API
+    6. Explore your datasets using semantic search and SQL with a simple GUI powered by ultralytics_MB Explorer API
         yolo explorer
 
     5. Run special commands:
@@ -200,6 +202,18 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
 
     Returns:
         (SimpleNamespace): Training arguments namespace.
+        (SimpleNamespace): Namespace containing the merged configuration arguments.
+
+    Examples:
+        >>> from ultralytics_MB.cfg import get_cfg
+        >>> config = get_cfg()  # Load default configuration
+        >>> config = get_cfg("path/to/config.yaml", overrides={"epochs": 50, "batch_size": 16})
+
+    Notes:
+        - If both `cfg` and `overrides` are provided, the values in `overrides` will take precedence.
+        - Special handling ensures alignment and correctness of the configuration, such as converting numeric
+          `project` and `name` to strings and validating configuration keys and values.
+        - The function performs type and value checks on the configuration data.
     """
     cfg = cfg2dict(cfg)
 
@@ -227,7 +241,7 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
 
 
 def check_cfg(cfg, hard=True):
-    """Check Ultralytics configuration argument types and values."""
+    """Check ultralytics_MB configuration argument types and values."""
     for k, v in cfg.items():
         if v is not None:  # None values may be from optional args
             if k in CFG_FLOAT_KEYS and not isinstance(v, (int, float)):
@@ -350,9 +364,9 @@ def merge_equals_args(args: List[str]) -> List[str]:
 
 def handle_yolo_hub(args: List[str]) -> None:
     """
-    Handle Ultralytics HUB command-line interface (CLI) commands.
+    Handle ultralytics_MB HUB command-line interface (CLI) commands.
 
-    This function processes Ultralytics HUB CLI commands such as login and logout.
+    This function processes ultralytics_MB HUB CLI commands such as login and logout.
     It should be called when executing a script with arguments related to HUB authentication.
 
     Args:
@@ -367,10 +381,10 @@ def handle_yolo_hub(args: List[str]) -> None:
 
     if args[0] == "login":
         key = args[1] if len(args) > 1 else ""
-        # Log in to Ultralytics HUB using the provided API key
+        # Log in to ultralytics_MB HUB using the provided API key
         hub.login(key)
     elif args[0] == "logout":
-        # Log out from Ultralytics HUB
+        # Log out from ultralytics_MB HUB
         hub.logout()
 
 
@@ -384,16 +398,24 @@ def handle_yolo_settings(args: List[str]) -> None:
     Args:
         args (List[str]): A list of command line arguments for YOLO settings management.
 
-    Example:
-        ```bash
-        python my_script.py yolo settings reset
-        ```
+    Examples:
+        >>> handle_yolo_settings(["reset"])  # Reset YOLO settings
+        >>> handle_yolo_settings(["default_cfg_path=yolo11n.yaml"])  # Update a specific setting
+
+    Notes:
+        - If no arguments are provided, the function will display the current settings.
+        - The 'reset' command will delete the existing settings file and create new default settings.
+        - Other arguments are treated as key-value pairs to update specific settings.
+        - The function will check for alignment between the provided settings and the existing ones.
+        - After processing, the updated settings will be displayed.
+        - For more information on handling YOLO settings, visit:
+          https://docs.ultralytics_MB.com/quickstart/#ultralytics-settings
     """
     url = "https://docs.ultralytics_MB.com/quickstart/#ultralytics-settings"  # help URL
     try:
         if any(args):
             if args[0] == "reset":
-                SETTINGS_YAML.unlink()  # delete the settings file
+                SETTINGS_FILE.unlink()  # delete the settings file
                 SETTINGS.reset()  # create new settings
                 LOGGER.info("Settings reset successfully")  # inform the user that settings have been reset
             else:  # save a new setting
@@ -401,21 +423,66 @@ def handle_yolo_settings(args: List[str]) -> None:
                 check_dict_alignment(SETTINGS, new)
                 SETTINGS.update(new)
 
-        LOGGER.info(f"💡 Learn about settings at {url}")
-        yaml_print(SETTINGS_YAML)  # print the current settings
+        print(SETTINGS)  # print the current settings
+        LOGGER.info(f"💡 Learn more about ultralytics_MB Settings at {url}")
     except Exception as e:
         LOGGER.warning(f"WARNING ⚠️ settings error: '{e}'. Please see {url} for help.")
 
 
-def handle_explorer():
-    """Open the Ultralytics Explorer GUI."""
-    checks.check_requirements("streamlit")
+def handle_explorer(args: List[str]):
+    """
+    Launches a graphical user interface that provides tools for interacting with and analyzing datasets using the
+    ultralytics_MB Explorer API. It checks for the required 'streamlit' package and informs the user that the Explorer
+    dashboard is loading.
+
+    Args:
+        args (List[str]): A list of optional command line arguments.
+
+    Examples:
+        ```bash
+        yolo explorer data=data.yaml model=yolo11n.pt
+        ```
+
+    Notes:
+        - Requires 'streamlit' package version 1.29.0 or higher.
+        - The function does not take any arguments or return any values.
+        - It is typically called from the command line interface using the 'yolo explorer' command.
+    """
+    checks.check_requirements("streamlit>=1.29.0")
     LOGGER.info("💡 Loading Explorer dashboard...")
     subprocess.run(["streamlit", "run", ROOT / "data/explorer/gui/dash.py", "--server.maxMessageSize", "2048"])
 
 
-def parse_key_value_pair(pair):
-    """Parse one 'key=value' pair and return key and value."""
+
+def parse_key_value_pair(pair: str = "key=value"):
+    """
+    Parses a key-value pair string into separate key and value components.
+
+    Args:
+        pair (str): A string containing a key-value pair in the format "key=value".
+
+    Returns:
+        (tuple): A tuple containing two elements:
+            - key (str): The parsed key.
+            - value (str): The parsed value.
+
+    Raises:
+        AssertionError: If the value is missing or empty.
+
+    Examples:
+        >>> key, value = parse_key_value_pair("model=yolo11n.pt")
+        >>> print(f"Key: {key}, Value: {value}")
+        Key: model, Value: yolo11n.pt
+
+        >>> key, value = parse_key_value_pair("epochs=100")
+        >>> print(f"Key: {key}, Value: {value}")
+        Key: epochs, Value: 100
+
+    Notes:
+        - The function splits the input string on the first '=' character.
+        - Leading and trailing whitespace is removed from both key and value.
+        - An assertion error is raised if the value is empty after stripping.
+    """
     k, v = pair.split("=", 1)  # split on first '=' sign
     k, v = k.strip(), v.strip()  # remove spaces
     assert v, f"missing '{k}' value"
@@ -432,25 +499,36 @@ def smart_value(v):
     elif v_lower == "false":
         return False
     else:
-        with contextlib.suppress(Exception):
+        try:
             return eval(v)
-        return v
+        except:  # noqa E722
+            return v
 
 
 def entrypoint(debug=""):
     """
-    This function is the ultralytics_MB package entrypoint, it's responsible for parsing the command line arguments passed
-    to the package.
+    ultralytics_MB entrypoint function for parsing and executing command-line arguments.
 
-    This function allows for:
-    - passing mandatory YOLO args as a list of strings
-    - specifying the task to be performed, either 'detect', 'segment' or 'classify'
-    - specifying the mode, either 'train', 'val', 'test', or 'predict'
-    - running special modes like 'checks'
-    - passing overrides to the package's configuration
+    This function serves as the main entry point for the ultralytics_MB CLI, parsing command-line arguments and
+    executing the corresponding tasks such as training, validation, prediction, exporting models, and more.
 
-    It uses the package's default cfg and initializes it using the passed overrides.
-    Then it calls the CLI function with the composed cfg
+    Args:
+        debug (str): Space-separated string of command-line arguments for debugging purposes.
+
+    Examples:
+        Train a detection model for 10 epochs with an initial learning_rate of 0.01:
+        >>> entrypoint("train data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01")
+
+        Predict a YouTube video using a pretrained segmentation model at image size 320:
+        >>> entrypoint("predict model=yolo11n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320")
+
+        Validate a pretrained detection model at batch-size 1 and image size 640:
+        >>> entrypoint("val model=yolo11n.pt data=coco8.yaml batch=1 imgsz=640")
+
+    Notes:
+        - If no arguments are passed, the function will display the usage help message.
+        - For a list of all available commands and their arguments, see the provided help messages and the
+          ultralytics_MB documentation at https://docs.ultralytics_MB.com.
     """
     args = (debug.split(" ") if debug else sys.argv)[1:]
     if not args:  # no arguments passed
@@ -465,6 +543,7 @@ def entrypoint(debug=""):
         "cfg": lambda: yaml_print(DEFAULT_CFG_PATH),
         "hub": lambda: handle_yolo_hub(args[1:]),
         "login": lambda: handle_yolo_hub(args),
+        "logout": lambda: handle_yolo_hub(args),
         "copy-cfg": copy_default_cfg,
         "explorer": lambda: handle_explorer(),
     }
@@ -533,7 +612,7 @@ def entrypoint(debug=""):
     # Model
     model = overrides.pop("model", DEFAULT_CFG.model)
     if model is None:
-        model = "yolov8n.pt"
+        model = "yolo11n.pt"
         LOGGER.warning(f"WARNING ⚠️ 'model' argument is missing. Using default 'model={model}'.")
     overrides["model"] = model
     stem = Path(model).stem.lower()
@@ -545,6 +624,10 @@ def entrypoint(debug=""):
         from ultralytics_MB import FastSAM
 
         model = FastSAM(model)
+    elif "sam2" in stem:
+        from ultralytics_MB import SAM2
+
+        model = SAM2(model)
     elif "sam" in stem:
         from ultralytics_MB import SAM
 
@@ -584,6 +667,10 @@ def entrypoint(debug=""):
     # Show help
     LOGGER.info(f"💡 Learn more at https://docs.ultralytics_MB.com/modes/{mode}")
 
+    # Recommend VS Code extension
+    if IS_VSCODE and SETTINGS.get("vscode_msg", True):
+        LOGGER.info(vscode_msg())
+
 
 # Special modes --------------------------------------------------------------------------------------------------------
 def copy_default_cfg():
@@ -597,5 +684,5 @@ def copy_default_cfg():
 
 
 if __name__ == "__main__":
-    # Example: entrypoint(debug='yolo predict model=yolov8n.pt')
+    # Example: entrypoint(debug='yolo predict model=yolo11n.pt')
     entrypoint(debug="")

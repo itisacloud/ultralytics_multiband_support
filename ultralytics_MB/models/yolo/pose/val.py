@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from pathlib import Path
 
@@ -20,7 +20,7 @@ class PoseValidator(DetectionValidator):
         ```python
         from ultralytics_MB.models.yolo.pose import PoseValidator
 
-        args = dict(model='yolov8n-pose.pt', data='coco8-pose.yaml')
+        args = dict(model="yolov8n-pose.pt", data="coco8-pose.yaml")
         validator = PoseValidator(args=args)
         validator()
         ```
@@ -69,7 +69,7 @@ class PoseValidator(DetectionValidator):
             self.args.iou,
             labels=self.lb,
             multi_label=True,
-            agnostic=self.args.single_cls,
+            agnostic=self.args.single_cls or self.args.agnostic_nms,
             max_det=self.args.max_det,
             nc=self.nc,
         )

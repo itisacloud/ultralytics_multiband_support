@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import cv2
 
@@ -139,7 +139,7 @@ class AIGym:
             self.annotator.kpts(k, shape=(640, 640), radius=1, kpt_line=True)
 
         if self.env_check and self.view_img:
-            cv2.imshow("Ultralytics YOLOv8 AI GYM", self.im0)
+            cv2.imshow("ultralytics_MB YOLOv8 AI GYM", self.im0)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 return
 

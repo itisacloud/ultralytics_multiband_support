@@ -1,19 +1,20 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 """
 Train a model on a dataset.
 
 Usage:
     $ yolo mode=train model=yolov8n.pt data=coco128.yaml imgsz=640 epochs=100 batch=16
 """
-
+import gc
 import math
 import os
 import subprocess
 import time
 import warnings
-from copy import deepcopy
+from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
+import io
 
 import numpy as np
 import torch
@@ -40,20 +41,21 @@ from ultralytics_MB.utils.checks import check_amp, check_file, check_imgsz, chec
 from ultralytics_MB.utils.dist import ddp_cleanup, generate_ddp_command
 from ultralytics_MB.utils.files import get_latest_run
 from ultralytics_MB.utils.torch_utils import (
+    TORCH_2_4,
     EarlyStopping,
     ModelEMA,
-    de_parallel,
+    autocast,
+    convert_optimizer_state_dict_to_fp16,
     init_seeds,
     one_cycle,
     select_device,
     strip_optimizer,
+    torch_distributed_zero_first, de_parallel,
 )
 
 
 class BaseTrainer:
     """
-    BaseTrainer.
-
     A base class for creating trainers.
 
     Attributes:
@@ -182,9 +184,11 @@ class BaseTrainer:
             world_size = len(self.args.device.split(","))
         elif isinstance(self.args.device, (tuple, list)):  # i.e. device=[0, 1, 2, 3] (multi-GPU from CLI is list)
             world_size = len(self.args.device)
+        elif self.args.device in {"cpu", "mps"}:  # i.e. device='cpu' or 'mps'
+            world_size = 0
         elif torch.cuda.is_available():  # i.e. device=None or device='' or device=number
             world_size = 1  # default to device 0
-        else:  # i.e. device='cpu' or 'mps'
+        else:  # i.e. device=None or device=''
             world_size = 0
 
         # Run subprocess if DDP training, else train normally
@@ -236,7 +240,6 @@ class BaseTrainer:
 
     def _setup_train(self, world_size):
         """Builds dataloaders and optimizer on correct rank process."""
-
         # Model
         self.run_callbacks("on_pretrain_routine_start")
         ckpt = self.setup_model()
@@ -274,7 +277,9 @@ class BaseTrainer:
         if RANK > -1 and world_size > 1:  # DDP
             dist.broadcast(self.amp, src=0)  # broadcast the tensor from rank 0 to all other ranks (returns None)
         self.amp = bool(self.amp)  # as boolean
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp)
+        self.scaler = (
+            torch.amp.GradScaler("cuda", enabled=self.amp) if TORCH_2_4 else torch.cuda.amp.GradScaler(enabled=self.amp)
+        )
         if world_size > 1:
             self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[RANK])
 
@@ -465,6 +470,7 @@ class BaseTrainer:
                     self.stop |= epoch >= self.epochs  # stop if exceeded epochs
                 self.scheduler.step()
             self.run_callbacks("on_fit_epoch_end")
+            gc.collect()
             torch.cuda.empty_cache()  # clear GPU memory at end of epoch, may help reduce CUDA out of memory errors
 
             # Early Stopping
@@ -478,14 +484,13 @@ class BaseTrainer:
 
         if RANK in (-1, 0):
             # Do final val with best.pt
-            LOGGER.info(
-                f"\n{epoch - self.start_epoch + 1} epochs completed in "
-                f"{(time.time() - self.train_time_start) / 3600:.3f} hours."
-            )
+            seconds = time.time() - self.train_time_start
+            LOGGER.info(f"\n{epoch - self.start_epoch + 1} epochs completed in {seconds / 3600:.3f} hours.")
             self.final_eval()
             if self.args.plots:
                 self.plot_metrics()
             self.run_callbacks("on_train_end")
+        gc.collect()
         torch.cuda.empty_cache()
         self.run_callbacks("teardown")
 
@@ -617,26 +622,31 @@ class BaseTrainer:
     def save_metrics(self, metrics):
         """Saves training metrics to a CSV file."""
         keys, vals = list(metrics.keys()), list(metrics.values())
-        n = len(metrics) + 1  # number of cols
-        s = "" if self.csv.exists() else (("%23s," * n % tuple(["epoch"] + keys)).rstrip(",") + "\n")  # header
+        n = len(metrics) + 2  # number of cols
+        s = "" if self.csv.exists() else (("%s," * n % tuple(["epoch", "time"] + keys)).rstrip(",") + "\n")  # header
+        t = time.time() - self.train_time_start
         with open(self.csv, "a") as f:
-            f.write(s + ("%23.5g," * n % tuple([self.epoch + 1] + vals)).rstrip(",") + "\n")
+            f.write(s + ("%.6g," * n % tuple([self.epoch + 1, t] + vals)).rstrip(",") + "\n")
 
     def plot_metrics(self):
         """Plot and display metrics visually."""
         pass
 
     def on_plot(self, name, data=None):
-        """Registers plots (e.g. to be consumed in callbacks)"""
+        """Registers plots (e.g. to be consumed in callbacks)."""
         path = Path(name)
         self.plots[path] = {"data": data, "timestamp": time.time()}
 
     def final_eval(self):
         """Performs final evaluation and validation for object detection YOLO model."""
+        ckpt = {}
         for f in self.last, self.best:
             if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is self.best:
+                if f is self.last:
+                    ckpt = strip_optimizer(f)
+                elif f is self.best:
+                    k = "train_results"  # update best.pt train_metrics from last.pt
+                    strip_optimizer(f, updates={k: ckpt[k]} if k in ckpt else None)
                     LOGGER.info(f"\nValidating {f}...")
                     self.validator.args.plots = self.args.plots
                     self.metrics = self.validator(model=f)
@@ -658,8 +668,8 @@ class BaseTrainer:
 
                 resume = True
                 self.args = get_cfg(ckpt_args)
-                self.args.model = str(last)  # reinstate model
-                for k in "imgsz", "batch":  # allow arg updates to reduce memory on resume if crashed due to CUDA OOM
+                self.args.model = self.args.resume = str(last)  # reinstate model
+                for k in "imgsz", "batch", "device":  # allow arg updates to reduce memory or update device on resume
                     if k in overrides:
                         setattr(self.args, k, overrides[k])
 
@@ -706,7 +716,7 @@ class BaseTrainer:
             self.train_loader.dataset.mosaic = False
         if hasattr(self.train_loader.dataset, "close_mosaic"):
             LOGGER.info("Closing dataloader mosaic")
-            self.train_loader.dataset.close_mosaic(hyp=self.args)
+            self.train_loader.dataset.close_mosaic(hyp=copy(self.args))
 
     def build_optimizer(self, model, name="auto", lr=0.001, momentum=0.9, decay=1e-5, iterations=1e5):
         """
@@ -726,7 +736,6 @@ class BaseTrainer:
         Returns:
             (torch.optim.Optimizer): The constructed optimizer.
         """
-
         g = [], [], []  # optimizer parameter groups
         bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()
         if name == "auto":

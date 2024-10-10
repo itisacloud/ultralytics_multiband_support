@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import torch
 
@@ -21,7 +21,7 @@ class RTDETRPredictor(BasePredictor):
         from ultralytics_MB.utils import ASSETS
         from ultralytics_MB.models.rtdetr import RTDETRPredictor
 
-        args = dict(model='rtdetr-l.pt', source=ASSETS)
+        args = dict(model="rtdetr-l.pt", source=ASSETS)
         predictor = RTDETRPredictor(overrides=args)
         predictor.predict_cli()
         ```

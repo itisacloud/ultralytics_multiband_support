@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import os
 import shutil
@@ -27,7 +27,7 @@ def generate_ddp_file(trainer):
     module, name = f"{trainer.__class__.__module__}.{trainer.__class__.__name__}".rsplit(".", 1)
 
     content = f"""
-# Ultralytics Multi-GPU training temp file (should be automatically deleted after use)
+# ultralytics_MB Multi-GPU training temp file (should be automatically deleted after use)
 overrides = {vars(trainer.args)}
 
 if __name__ == "__main__":

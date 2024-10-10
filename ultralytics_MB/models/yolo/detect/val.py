@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import os
 from pathlib import Path
@@ -22,7 +22,7 @@ class DetectionValidator(BaseValidator):
         ```python
         from ultralytics_MB.models.yolo.detect import DetectionValidator
 
-        args = dict(model='yolov8n.pt', data='coco8.yaml')
+        args = dict(model="yolov8n.pt", data="coco8.yaml")
         validator = DetectionValidator(args=args)
         validator()
         ```
@@ -65,9 +65,14 @@ class DetectionValidator(BaseValidator):
     def init_metrics(self, model):
         """Initialize evaluation metrics for YOLO."""
         val = self.data.get(self.args.split, "")  # validation path
-        self.is_coco = isinstance(val, str) and "coco" in val and val.endswith(f"{os.sep}val2017.txt")  # is COCO
-        self.class_map = converter.coco80_to_coco91_class() if self.is_coco else list(range(1000))
-        self.args.save_json |= self.is_coco and not self.training  # run on final val if training COCO
+        self.is_coco = (
+            isinstance(val, str)
+            and "coco" in val
+            and (val.endswith(f"{os.sep}val2017.txt") or val.endswith(f"{os.sep}test-dev2017.txt"))
+        )  # is COCO
+        self.is_lvis = isinstance(val, str) and "lvis" in val and not self.is_coco  # is LVIS
+        self.class_map = converter.coco80_to_coco91_class() if self.is_coco else list(range(len(model.names)))
+        self.args.save_json |= self.args.val and (self.is_coco or self.is_lvis) and not self.training  # run final val
         self.names = model.names
         self.nc = len(model.names)
         self.metrics.names = self.names

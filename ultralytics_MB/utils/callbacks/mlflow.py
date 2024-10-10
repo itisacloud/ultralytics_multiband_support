@@ -1,8 +1,8 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 """
-MLflow Logging for Ultralytics YOLO.
+MLflow Logging for ultralytics_MB YOLO.
 
-This module enables MLflow logging for Ultralytics YOLO. It logs metrics, parameters, and model artifacts.
+This module enables MLflow logging for ultralytics_MB YOLO. It logs metrics, parameters, and model artifacts.
 For setting up, a tracking URI should be specified. The logging can be customized using environment variables.
 
 Commands:
@@ -67,7 +67,7 @@ def on_pretrain_routine_end(trainer):
     mlflow.set_tracking_uri(uri)
 
     # Set experiment and run names
-    experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME") or trainer.args.project or "/Shared/YOLOv8"
+    experiment_name = os.environ.get("MLFLOW_EXPERIMENT_NAME") or trainer.args.project or "/Shared/Ultralytics"
     run_name = os.environ.get("MLFLOW_RUN") or trainer.args.name
     mlflow.set_experiment(experiment_name)
 

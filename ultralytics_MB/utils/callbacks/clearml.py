@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from ultralytics_MB.utils import LOGGER, SETTINGS, TESTS_RUNNING
 
@@ -67,9 +67,9 @@ def on_pretrain_routine_start(trainer):
             PatchedMatplotlib.update_current_task(None)
         else:
             task = Task.init(
-                project_name=trainer.args.project or "YOLOv8",
+                project_name=trainer.args.project or "Ultralytics",
                 task_name=trainer.args.name,
-                tags=["YOLOv8"],
+                tags=["Ultralytics"],
                 output_uri=True,
                 reuse_last_task_id=False,
                 auto_connect_frameworks={"pytorch": False, "matplotlib": False},

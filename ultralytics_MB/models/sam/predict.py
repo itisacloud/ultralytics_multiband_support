@@ -1,10 +1,10 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 """
 Generate predictions using the Segment Anything Model (SAM).
 
 SAM is an advanced image segmentation model offering features like promptable segmentation and zero-shot performance.
 This module contains the implementation of the prediction logic and auxiliary utilities required to perform segmentation
-using SAM. It forms an integral part of the Ultralytics framework and is designed for high-performance, real-time image
+using SAM. It forms an integral part of the ultralytics_MB framework and is designed for high-performance, real-time image
 segmentation tasks.
 """
 
@@ -318,7 +318,7 @@ class Predictor(BasePredictor):
         Initializes the Segment Anything Model (SAM) for inference.
 
         This method sets up the SAM model by allocating it to the appropriate device and initializing the necessary
-        parameters for image normalization and other Ultralytics compatibility settings.
+        parameters for image normalization and other ultralytics_MB compatibility settings.
 
         Args:
             model (torch.nn.Module): A pre-trained SAM model. If None, a model will be built based on configuration.
@@ -339,7 +339,7 @@ class Predictor(BasePredictor):
         self.mean = torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1).to(device)
         self.std = torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1).to(device)
 
-        # Ultralytics compatibility settings
+        # ultralytics_MB compatibility settings
         self.model.pt = False
         self.model.triton = False
         self.model.stride = 32

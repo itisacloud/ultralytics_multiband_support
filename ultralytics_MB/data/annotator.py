@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 from pathlib import Path
 
@@ -17,9 +17,9 @@ def auto_annotate(data, det_model="yolov8x.pt", sam_model="sam_b.pt", device="",
         output_dir (str | None | optional): Directory to save the annotated results.
             Defaults to a 'labels' folder in the same directory as 'data'.
 
-    Example:
-        ```python
-        from ultralytics_MB.data.annotator import auto_annotate
+    Examples:
+        >>> from ultralytics_MB.data.annotator import auto_annotate
+        >>> auto_annotate(data="ultralytics/assets", det_model="yolov8n.pt", sam_model="mobile_sam.pt")
 
         auto_annotate(data='ultralytics_MB/assets', det_model='yolov8n.pt', sam_model='mobile_sam.pt')
         ```

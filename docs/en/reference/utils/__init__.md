@@ -5,7 +5,7 @@ keywords: Ultralytics, Utils, utilitarian functions, colorstr, yaml_save, set_lo
 
 # Reference for `ultralytics/utils/__init__.py`
 
-!!! Note
+!!! note
 
     This file is available at [https://github.com/ultralytics/ultralytics/blob/main/ultralytics/utils/__init__.py](https://github.com/ultralytics/ultralytics/blob/main/ultralytics/utils/__init__.py). If you spot a problem please help fix it by [contributing](https://docs.ultralytics.com/help/contributing/) a [Pull Request](https://github.com/ultralytics/ultralytics/edit/main/ultralytics/utils/__init__.py) 🛠️. Thank you 🙏!
 
@@ -34,6 +34,10 @@ keywords: Ultralytics, Utils, utilitarian functions, colorstr, yaml_save, set_lo
 ## ::: ultralytics.utils.Retry
 
 <br><br>
+
+## ::: ultralytics.utils.JSONDict
+
+<br><br><hr><br>
 
 ## ::: ultralytics.utils.SettingsManager
 
@@ -156,5 +160,9 @@ keywords: Ultralytics, Utils, utilitarian functions, colorstr, yaml_save, set_lo
 <br><br>
 
 ## ::: ultralytics.utils.url2file
+
+<br><br><hr><br>
+
+## ::: ultralytics.utils.vscode_msg
 
 <br><br>

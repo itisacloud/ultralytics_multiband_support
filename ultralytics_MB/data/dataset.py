@@ -1,4 +1,7 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
+
+import json
+from collections import defaultdict
 import contextlib
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
@@ -8,6 +11,8 @@ import cv2
 import numpy as np
 import torch
 import torchvision
+from torch.utils.data import ConcatDataset
+
 from PIL import Image
 
 from ultralytics_MB.utils import LOCAL_RANK, NUM_THREADS, TQDM, colorstr, is_dir_writeable
@@ -16,7 +21,7 @@ from .augment import Compose, Format, Instances, LetterBox, classify_augmentatio
 from .base import BaseDataset
 from .utils import HELP_URL, LOGGER, get_hash, img2label_paths, verify_image, verify_image_label
 
-# Ultralytics dataset *.cache version, >= 1.0.0 for YOLOv8
+# ultralytics_MB dataset *.cache version, >= 1.0.0 for YOLOv8
 DATASET_CACHE_VERSION = "1.0.3"
 
 
@@ -225,8 +230,144 @@ class YOLODataset(BaseDataset):
         return new_batch
 
 
-# Classification dataloaders -------------------------------------------------------------------------------------------
-class ClassificationDataset(torchvision.datasets.ImageFolder):
+class YOLOMultiModalDataset(YOLODataset):
+    """
+    Dataset class for loading object detection and/or segmentation labels in YOLO format.
+
+    Args:
+        data (dict, optional): A dataset YAML dictionary. Defaults to None.
+        task (str): An explicit arg to point current task, Defaults to 'detect'.
+
+    Returns:
+        (torch.utils.data.Dataset): A PyTorch dataset object that can be used for training an object detection model.
+    """
+
+    def __init__(self, *args, data=None, task="detect", **kwargs):
+        """Initializes a dataset object for object detection tasks with optional specifications."""
+        super().__init__(*args, data=data, task=task, **kwargs)
+
+    def update_labels_info(self, label):
+        """Add texts information for multi-modal model training."""
+        labels = super().update_labels_info(label)
+        # NOTE: some categories are concatenated with its synonyms by `/`.
+        labels["texts"] = [v.split("/") for _, v in self.data["names"].items()]
+        return labels
+
+    def build_transforms(self, hyp=None):
+        """Enhances data transformations with optional text augmentation for multi-modal training."""
+        transforms = super().build_transforms(hyp)
+        if self.augment:
+            # NOTE: hard-coded the args for now.
+            transforms.insert(-1, RandomLoadText(max_samples=min(self.data["nc"], 80), padding=True))
+        return transforms
+
+
+class GroundingDataset(YOLODataset):
+    """Handles object detection tasks by loading annotations from a specified JSON file, supporting YOLO format."""
+
+    def __init__(self, *args, task="detect", json_file, **kwargs):
+        """Initializes a GroundingDataset for object detection, loading annotations from a specified JSON file."""
+        assert task == "detect", "`GroundingDataset` only support `detect` task for now!"
+        self.json_file = json_file
+        super().__init__(*args, task=task, data={}, **kwargs)
+
+    def get_img_files(self, img_path):
+        """The image files would be read in `get_labels` function, return empty list here."""
+        return []
+
+    def get_labels(self):
+        """Loads annotations from a JSON file, filters, and normalizes bounding boxes for each image."""
+        labels = []
+        LOGGER.info("Loading annotation file...")
+        with open(self.json_file) as f:
+            annotations = json.load(f)
+        images = {f'{x["id"]:d}': x for x in annotations["images"]}
+        img_to_anns = defaultdict(list)
+        for ann in annotations["annotations"]:
+            img_to_anns[ann["image_id"]].append(ann)
+        for img_id, anns in TQDM(img_to_anns.items(), desc=f"Reading annotations {self.json_file}"):
+            img = images[f"{img_id:d}"]
+            h, w, f = img["height"], img["width"], img["file_name"]
+            im_file = Path(self.img_path) / f
+            if not im_file.exists():
+                continue
+            self.im_files.append(str(im_file))
+            bboxes = []
+            cat2id = {}
+            texts = []
+            for ann in anns:
+                if ann["iscrowd"]:
+                    continue
+                box = np.array(ann["bbox"], dtype=np.float32)
+                box[:2] += box[2:] / 2
+                box[[0, 2]] /= float(w)
+                box[[1, 3]] /= float(h)
+                if box[2] <= 0 or box[3] <= 0:
+                    continue
+
+                cat_name = " ".join([img["caption"][t[0] : t[1]] for t in ann["tokens_positive"]])
+                if cat_name not in cat2id:
+                    cat2id[cat_name] = len(cat2id)
+                    texts.append([cat_name])
+                cls = cat2id[cat_name]  # class
+                box = [cls] + box.tolist()
+                if box not in bboxes:
+                    bboxes.append(box)
+            lb = np.array(bboxes, dtype=np.float32) if len(bboxes) else np.zeros((0, 5), dtype=np.float32)
+            labels.append(
+                {
+                    "im_file": im_file,
+                    "shape": (h, w),
+                    "cls": lb[:, 0:1],  # n, 1
+                    "bboxes": lb[:, 1:],  # n, 4
+                    "normalized": True,
+                    "bbox_format": "xywh",
+                    "texts": texts,
+                }
+            )
+        return labels
+
+    def build_transforms(self, hyp=None):
+        """Configures augmentations for training with optional text loading; `hyp` adjusts augmentation intensity."""
+        transforms = super().build_transforms(hyp)
+        if self.augment:
+            # NOTE: hard-coded the args for now.
+            transforms.insert(-1, RandomLoadText(max_samples=80, padding=True))
+        return transforms
+
+
+class YOLOConcatDataset(ConcatDataset):
+    """
+    Dataset as a concatenation of multiple datasets.
+
+    This class is useful to assemble different existing datasets.
+    """
+
+    @staticmethod
+    def collate_fn(batch):
+        """Collates data samples into batches."""
+        return YOLODataset.collate_fn(batch)
+
+
+# TODO: support semantic segmentation
+class SemanticDataset(BaseDataset):
+    """
+    Semantic Segmentation Dataset.
+
+    This class is responsible for handling datasets used for semantic segmentation tasks. It inherits functionalities
+    from the BaseDataset class.
+
+    Note:
+        This class is currently a placeholder and needs to be populated with methods and attributes for supporting
+        semantic segmentation tasks.
+    """
+
+    def __init__(self):
+        """Initialize a SemanticDataset object."""
+        super().__init__()
+
+
+class ClassificationDataset:
     """
     Extends torchvision ImageFolder to support YOLO classification tasks, offering functionalities like image
     augmentation, caching, and verification. It's designed to efficiently handle large datasets for training deep
@@ -308,7 +449,7 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
         desc = f"{self.prefix} Scanning {self.root}..."
         path = Path(self.root).with_suffix(".cache")  # *.cache file path
 
-        with contextlib.suppress(FileNotFoundError, AssertionError, AttributeError):
+        try:
             cache = load_dataset_cache_file(path)  # attempt to load a *.cache file
             assert cache["version"] == DATASET_CACHE_VERSION  # matches current version
             assert cache["hash"] == get_hash([x[0] for x in self.samples])  # identical hash
@@ -320,31 +461,32 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
                     LOGGER.info("\n".join(cache["msgs"]))  # display warnings
             return samples
 
-        # Run scan if *.cache retrieval failed
-        nf, nc, msgs, samples, x = 0, 0, [], [], {}
-        with ThreadPool(NUM_THREADS) as pool:
-            results = pool.imap(func=verify_image, iterable=zip(self.samples, repeat(self.prefix)))
-            pbar = TQDM(results, desc=desc, total=len(self.samples))
-            for sample, nf_f, nc_f, msg in pbar:
-                if nf_f:
-                    samples.append(sample)
-                if msg:
-                    msgs.append(msg)
-                nf += nf_f
-                nc += nc_f
-                pbar.desc = f"{desc} {nf} images, {nc} corrupt"
-            pbar.close()
-        if msgs:
-            LOGGER.info("\n".join(msgs))
-        x["hash"] = get_hash([x[0] for x in self.samples])
-        x["results"] = nf, nc, len(samples), samples
-        x["msgs"] = msgs  # warnings
-        save_dataset_cache_file(self.prefix, path, x)
-        return samples
+        except (FileNotFoundError, AssertionError, AttributeError):
+            # Run scan if *.cache retrieval failed
+            nf, nc, msgs, samples, x = 0, 0, [], [], {}
+            with ThreadPool(NUM_THREADS) as pool:
+                results = pool.imap(func=verify_image, iterable=zip(self.samples, repeat(self.prefix)))
+                pbar = TQDM(results, desc=desc, total=len(self.samples))
+                for sample, nf_f, nc_f, msg in pbar:
+                    if nf_f:
+                        samples.append(sample)
+                    if msg:
+                        msgs.append(msg)
+                    nf += nf_f
+                    nc += nc_f
+                    pbar.desc = f"{desc} {nf} images, {nc} corrupt"
+                pbar.close()
+            if msgs:
+                LOGGER.info("\n".join(msgs))
+            x["hash"] = get_hash([x[0] for x in self.samples])
+            x["results"] = nf, nc, len(samples), samples
+            x["msgs"] = msgs  # warnings
+            save_dataset_cache_file(self.prefix, path, x, DATASET_CACHE_VERSION)
+            return samples
 
 
 def load_dataset_cache_file(path):
-    """Load an Ultralytics *.cache dictionary from path."""
+    """Load an ultralytics_MB *.cache dictionary from path."""
     import gc
 
     gc.disable()  # reduce pickle load time https://github.com/ultralytics/ultralytics/pull/1585
@@ -354,7 +496,7 @@ def load_dataset_cache_file(path):
 
 
 def save_dataset_cache_file(prefix, path, x):
-    """Save an Ultralytics dataset *.cache dictionary x to path."""
+    """Save an ultralytics_MB dataset *.cache dictionary x to path."""
     x["version"] = DATASET_CACHE_VERSION  # add cache version
     if is_dir_writeable(path.parent):
         if path.exists():

@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
 import torch
 
@@ -20,7 +20,7 @@ class ClassificationValidator(BaseValidator):
         ```python
         from ultralytics_MB.models.yolo.classify import ClassificationValidator
 
-        args = dict(model='yolov8n-cls.pt', data='imagenet10')
+        args = dict(model="yolov8n-cls.pt", data="imagenet10")
         validator = ClassificationValidator(args=args)
         validator()
         ```

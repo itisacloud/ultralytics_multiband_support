@@ -1,6 +1,5 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
-import contextlib
 import hashlib
 import json
 import os
@@ -25,7 +24,7 @@ from ultralytics_MB.utils import (
     LOGGER,
     NUM_THREADS,
     ROOT,
-    SETTINGS_YAML,
+    SETTINGS_FILE,
     TQDM,
     clean_url,
     colorstr,
@@ -65,12 +64,14 @@ def exif_size(img: Image.Image):
     """Returns exif-corrected PIL size."""
     s = img.size  # (width, height)
     if img.format == "JPEG":  # only support JPEG images
-        with contextlib.suppress(Exception):
+        try:
             exif = img.getexif()
             if exif:
                 rotation = exif.get(274, None)  # the EXIF key for the orientation tag is 274
                 if rotation in [6, 8]:  # rotation 270 or 90
                     s = s[1], s[0]
+        except:  # noqa E722
+            pass
     return s
 
 
@@ -238,7 +239,7 @@ def polygons2masks_overlap(imgsz, segments, downsample_ratio=1):
     ms = []
     for si in range(len(segments)):
         mask = polygon2mask(imgsz, [segments[si].reshape(-1)], downsample_ratio=downsample_ratio, color=1)
-        ms.append(mask)
+        ms.append(mask.astype(masks.dtype))
         areas.append(mask.sum())
     areas = np.asarray(areas)
     index = np.argsort(-areas)
@@ -287,7 +288,6 @@ def check_det_dataset(dataset, autodownload=True):
     Returns:
         (dict): Parsed dataset information and paths.
     """
-
     file = check_file(dataset)
 
     # Download (optional)
@@ -347,7 +347,7 @@ def check_det_dataset(dataset, autodownload=True):
             if s and autodownload:
                 LOGGER.warning(m)
             else:
-                m += f"\nNote dataset download directory is '{DATASETS_DIR}'. You can update this in '{SETTINGS_YAML}'"
+                m += f"\nNote dataset download directory is '{DATASETS_DIR}'. You can update this in '{SETTINGS_FILE}'"
                 raise FileNotFoundError(m)
             t = time.time()
             r = None  # success
@@ -385,7 +385,6 @@ def check_cls_dataset(dataset, split=""):
             - 'nc' (int): The number of classes in the dataset.
             - 'names' (dict): A dictionary of class names in the dataset.
     """
-
     # Download (optional if dataset=https://file.zip is passed directly)
     if str(dataset).startswith(("http:/", "https:/")):
         dataset = safe_download(dataset, dir=DATASETS_DIR, unzip=True, delete=False)
@@ -460,10 +459,11 @@ class HUBDatasetStats:
         ```python
         from ultralytics_MB.data.utils import HUBDatasetStats
 
-        stats = HUBDatasetStats('path/to/coco8.zip', task='detect')  # detect dataset
-        stats = HUBDatasetStats('path/to/coco8-seg.zip', task='segment')  # segment dataset
-        stats = HUBDatasetStats('path/to/coco8-pose.zip', task='pose')  # pose dataset
-        stats = HUBDatasetStats('path/to/imagenet10.zip', task='classify')  # classification dataset
+        stats = HUBDatasetStats("path/to/coco8.zip", task="detect")  # detect dataset
+        stats = HUBDatasetStats("path/to/coco8-seg.zip", task="segment")  # segment dataset
+        stats = HUBDatasetStats("path/to/coco8-pose.zip", task="pose")  # pose dataset
+        stats = HUBDatasetStats("path/to/dota8.zip", task="obb")  # OBB dataset
+        stats = HUBDatasetStats("path/to/imagenet10.zip", task="classify")  # classification dataset
 
         stats.get_json(save=True)
         stats.process_images()
@@ -475,12 +475,12 @@ class HUBDatasetStats:
         path = Path(path).resolve()
         LOGGER.info(f"Starting HUB dataset checks for {path}....")
 
-        self.task = task  # detect, segment, pose, classify
+        self.task = task  # detect, segment, pose, classify, obb
         if self.task == "classify":
             unzip_dir = unzip_file(path)
             data = check_cls_dataset(unzip_dir)
             data["path"] = unzip_dir
-        else:  # detect, segment, pose
+        else:  # detect, segment, pose, obb
             _, data_dir, yaml_path = self._unzip(Path(path))
             try:
                 # Load YAML with checks
@@ -513,7 +513,7 @@ class HUBDatasetStats:
         compress_one_image(f, self.im_dir / Path(f).name)  # save to dataset-hub
 
     def get_json(self, save=False, verbose=False):
-        """Return dataset JSON for Ultralytics HUB."""
+        """Return dataset JSON for ultralytics_MB HUB."""
 
         def _round(labels):
             """Update labels to integer class and 4 decimal place floats."""
@@ -587,7 +587,7 @@ class HUBDatasetStats:
         return self.stats
 
     def process_images(self):
-        """Compress images for Ultralytics HUB."""
+        """Compress images for ultralytics_MB HUB."""
         from ultralytics_MB.data import YOLODataset  # ClassificationDataset
 
         self.im_dir.mkdir(parents=True, exist_ok=True)  # makes dataset-hub/images/
@@ -619,11 +619,10 @@ def compress_one_image(f, f_new=None, max_dim=1920, quality=50):
         from pathlib import Path
         from ultralytics_MB.data.utils import compress_one_image
 
-        for f in Path('path/to/dataset').rglob('*.jpg'):
+        for f in Path("path/to/dataset").rglob("*.jpg"):
             compress_one_image(f)
         ```
     """
-
     try:  # use PIL
         im = Image.open(f)
         r = max_dim / max(im.height, im.width)  # ratio
@@ -659,7 +658,6 @@ def autosplit(path=DATASETS_DIR / "coco8/images", weights=(0.9, 0.1, 0.0), annot
         autosplit()
         ```
     """
-
     path = Path(path)  # images dir
     files = sorted(x for x in path.rglob("*.*") if x.suffix[1:].lower() in IMG_FORMATS)  # image files only
     n = len(files)  # number of files
