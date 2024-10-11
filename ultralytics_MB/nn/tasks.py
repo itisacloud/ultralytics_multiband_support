@@ -956,18 +956,15 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
         if verbose:
             LOGGER.info(f"{colorstr('activation:')} {act}")  # print
-
     if verbose:
         LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
     ch = [ch]
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     sync_layers = d.get("synchronize",[])
     if not d.get("siamese", False):
-        print("disabled synchronize")
         sync_layers = []
     else:
-        print("enabled synchronize")
-
+        LOGGER.info(f"enabled the sync of the following pairs of layers: \n {sync_layers}")
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]
 
@@ -1090,9 +1087,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if i in [x[1] for x in sync_layers]:
             original = [x[0] for x in sync_layers if x[1] == i][0]
             m_ = layers[original]
-            print(f"synced layers {i} and {original }")
             # sync with previous layer
-        print(sync_layers)
         layers.append(m_)
 
         if i == 0:
