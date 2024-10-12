@@ -14,7 +14,7 @@ import torch
 from ultralytics_MB.utils import LOGGER, TQDM, checks, clean_url, emojis, is_online, url2file
 
 # Define ultralytics_MB GitHub assets maintained at https://github.com/ultralytics/assets
-GITHUB_ASSETS_REPO = "ultralytics_MB/assets"
+GITHUB_ASSETS_REPO = "ultralytics/assets"
 GITHUB_ASSETS_NAMES = (
     [f"yolov8{k}{suffix}.pt" for k in "nsmlx" for suffix in ("", "-cls", "-seg", "-pose", "-obb", "-oiv7")]
     + [f"yolo11{k}{suffix}.pt" for k in "nsmlx" for suffix in ("", "-cls", "-seg", "-pose", "-obb")]
@@ -402,7 +402,7 @@ def get_github_assets(repo="ultralytics/assets", version="latest", retry=False):
     return data["tag_name"], [x["name"] for x in data["assets"]]  # tag, assets i.e. ['yolov8n.pt', 'yolov8s.pt', ...]
 
 
-def attempt_download_asset(file, repo="ultralytics/assets", release="v8.2.0", **kwargs):
+def attempt_download_asset(file, repo="ultralytics/assets", release="v8.3.0", **kwargs):
     """
     Attempt to download a file from GitHub release assets if it is not found locally. The function checks for the file
     locally first, then tries to download it from the specified GitHub repository release.
@@ -473,7 +473,7 @@ def download(url, dir=Path.cwd(), unzip=True, delete=False, curl=False, threads=
 
     Example:
         ```python
-        download('https://ultralytics_MB.com/assets/example.zip', dir='path/to/dir', unzip=True)
+        download('https://ultralytics.com/assets/example.zip', dir='path/to/dir', unzip=True)
         ```
     """
     dir = Path(dir)
