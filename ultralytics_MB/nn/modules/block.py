@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import nn as nn
+import matplotlib.pyplot as plt
 
 from ultralytics_MB.utils.torch_utils import fuse_conv_and_bn
 
@@ -1116,11 +1117,38 @@ class Input(nn.Module):
     #forwards either the first three channels or the last three channels of the input tensor
     def __init__(self,input=[0,1,2]):
         self.input = input
+        self.counter = 0
+        self.plot = 0
+        self.path = ""
         super().__init__()
     def forward(self,x):
         if type(self.input) == int:
-            self.input = [0,1,2] if self.input else [3,4,5]
+            self.input = [0,1,2] if self.input == 0 else [5,4,3]
             LOGGER.warning("Supporting, former style")
+
+        if self.plot > self.counter:
+            if len(x.shape) == 4:
+                # x = [batch_size, channels, height, width]
+                img = x[:, self.input, :, :]
+                batch_size = img.shape[0]
+                # Create subplots for each image in the batch
+                fig, axes = plt.subplots(1, batch_size, figsize=(batch_size * 5, 5))
+                if batch_size == 1:
+                    axes = [axes]
+                for i in range(batch_size):
+                    image = img[i].detach().cpu().numpy().transpose(1, 2, 0)
+                    axes[i].imshow(image)
+                    axes[i].axis('off')
+                plt.savefig(f"{self.path}/input_{'_'.join([str(i) for i in self.input])}_n_{self.counter}.png" )
+            else:
+                # Unbatched input
+                img = x[self.input, :, :]
+                image = img.detach().cpu().numpy().transpose(1, 2, 0)
+                plt.figure()
+                plt.imshow(image)
+                plt.axis('off')
+                plt.savefig(f"{self.path}/input_{'_'.join([str(i) for i in self.input])}_n_{self.counter}.png" )
+        self.counter += 1
         if len(x.shape) == 4:
             # x = [x,y,bands]
             return x[:,self.input,:,:]

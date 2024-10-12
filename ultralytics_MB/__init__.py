@@ -1,6 +1,6 @@
 # ultralytics_MB YOLO 🚀, AGPL-3.0 license
 
-__version__ = "8.1.27"
+__version__ = "8.1.28"
 
 from ultralytics_MB.data.explorer.explorer import Explorer
 from ultralytics_MB.models import RTDETR, SAM, YOLO, YOLOWorld

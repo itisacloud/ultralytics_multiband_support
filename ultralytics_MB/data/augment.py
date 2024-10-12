@@ -1157,7 +1157,7 @@ class RotateRGBA(torch.nn.Module):
         img_rgb_rotated = np.array(img_rgb_pil)
 
         img_a_rotated = []
-        for band in img_a.spit():
+        for band in img_a.split():
             img_a_pil = Image.fromarray(band)
             img_a_pil = img_a_pil.rotate(angle, expand=self.expand)
             #resize
@@ -1451,7 +1451,14 @@ class ToTensor:
                 im = im[:, :, [2, 1, 0, 3]]  # BGRA to RGBA
             else:
                 #support n additional bands switch first three bands from bgr to rgb and leave rest as is
-                im = im[:, :, [2, 1, 0, *range(3, im.shape[-1])]]
+                if im.shape[-1] == 6:
+                    im = im[:, :, [2, 1, 0, 5, 4, 3]] #case of two rgb images
+                elif im.shape[-1] == 8:
+                    im = im[:, :, [2, 1, 0, 3, 6, 5, 4, 7]] #case of two rgba images
+                else:
+                    im = im[:, :, [2, 1, 0, *range(3, im.shape[-1])]]
+
+
         im = np.ascontiguousarray(im.transpose((2, 0, 1)))  # HWC to CHW -> BGR to RGB -> contiguous
         im = torch.from_numpy(im)  # to torch
         im = im.half() if self.half else im.float()  # uint8 to fp16/32
