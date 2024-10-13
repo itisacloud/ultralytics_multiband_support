@@ -325,6 +325,8 @@ class DetectionModel(BaseModel):
         self.names = {i: f"{i}" for i in range(self.yaml["nc"])}  # default names dict
         self.inplace = self.yaml.get("inplace", True)
         self.end2end = getattr(self.model[-1], "end2end", False)
+        self.sync_interval = getattr(self.yaml,"sync_interval",0)
+        self.sync_layers = getattr(self.yaml,"synchronize",[])
 
         # Build strides
         m = self.model[-1]  # Detect()
@@ -394,6 +396,13 @@ class DetectionModel(BaseModel):
     def init_criterion(self):
         """Initialize the loss criterion for the DetectionModel."""
         return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)
+
+    def synchronize_layers(self):
+        "call to synchronize defined layers"
+        for layer1_idx, layer2_idx in self.sync_layers:
+            layer1 = self.model[layer1_idx]
+            layer2 = self.model[layer2_idx]
+            layer2.load_state_dict(layer1.state_dict())
 
 
 class OBBModel(DetectionModel):
@@ -961,10 +970,12 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
     ch = [ch]
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     sync_layers = d.get("synchronize",[])
-    if not d.get("siamese", False):
+
+    if not d.get("siamese", False) or d.get("sync_interval",0) != 0:
         sync_layers = []
     else:
         LOGGER.info(f"enabled the sync of the following pairs of layers: \n {sync_layers}")
+        LOGGER.ingo(f"siamese: {d.get('siamese', False)} | sync interval : {d.get('sync_interval',0)}")
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]
 

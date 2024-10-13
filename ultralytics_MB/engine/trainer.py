@@ -407,10 +407,18 @@ class BaseTrainer:
                 # Backward
                 self.scaler.scale(self.loss).backward()
 
+                #sync in the defined intervals
+
+
                 # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
                 if ni - last_opt_step >= self.accumulate:
                     self.optimizer_step()
                     last_opt_step = ni
+                    self.optim_steps += 1
+
+                    if self.sync_interval != 0:
+                        if self.optim_steps % self.sync_interval == 0:
+                            self.model.synchronize_layers()
 
                     # Timed stopping
                     if self.args.time:
@@ -421,6 +429,7 @@ class BaseTrainer:
                             self.stop = broadcast_list[0]
                         if self.stop:  # training time exceeded
                             break
+
 
                 # Log
                 mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"  # (GB)
@@ -535,8 +544,9 @@ class BaseTrainer:
     def setup_model(self):
         """Load/create/download model for any task."""
         if isinstance(self.model, torch.nn.Module):  # if model is loaded beforehand. No setup needed
+            self.sync_interval = getattr(self.model, 'sync_interval', 0)
+            self.optim_steps = 0
             return
-
         model, weights = self.model, None
         ckpt = None
         if str(model).endswith(".pt"):
@@ -545,6 +555,8 @@ class BaseTrainer:
         else:
             cfg = model
         self.model = self.get_model(cfg=cfg, weights=weights, verbose=RANK == -1)  # calls Model(cfg, weights)
+        self.sync_interval = getattr(self.model, 'sync_interval', 0)
+        self.optim_steps = 0
         return ckpt
 
     def optimizer_step(self):
