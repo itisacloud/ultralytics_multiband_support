@@ -124,15 +124,15 @@ class BasePredictor:
             im = np.stack(self.pre_transform(im))
             LOGGER.info(f"Preprocessing: {im.shape}, {im.ndim}")
 
-            if im.shape[-1] == 3: #TODO check if we can drop this since this package should only handle 4 bands for now
+            if im.shape[-1] == 3:
                 if im.ndim == 4:
-                    im = im[:, :, :,[2, 1, 0]] # BGRA to RGB
+                    im = im[:, :, :,[2, 1, 0]] # BGR to RGB
                     im = im.transpose((0, 3, 1, 2))
                 elif im.ndim == 3:
                     im = im[:, :,[2, 1, 0]]
                     im = im.transpose(2,0, 1)
                     im = np.expand_dims(im, axis=0)
-            else:
+            elif im.shape[-1] == 4:
                 if im.ndim == 4:
                     im = im[:, :, :,[2, 1, 0, 3]] # BGRA to RGB
                     im = im.transpose((0, 3, 1, 2))
@@ -140,8 +140,15 @@ class BasePredictor:
                     im = im[:, :,[2, 1, 0, 3]]
                     im = im.transpose(2,0, 1) # HWC to CHW
                     im = np.expand_dims(im, axis=0) # add batch dimension
-                else:
-                    raise ValueError("Invalid input shape for image. Expected 3 or 4 dimensions. Got {im.ndim} dimensions.")
+            elif im.shape[-1] == 6:
+                if im.ndim == 4:
+                    im = im[:, :, :, [2, 1, 0, 5, 4, 3]]  # BGRA to RGB
+                    im = im.transpose((0, 3, 1, 2))
+                elif im.ndim == 3:
+                    im = im[:, :, [2, 1, 0, 5, 4, 3]]
+                    im = im.transpose(2, 0, 1)  # HWC to CHW
+                    im = np.expand_dims(im, axis=0)
+
             #im = im[..., ::-1].transpose((0, 3, 1, 2))  # BGR to RGB, BHWC to BCHW, (n, 3, h, w)
             im = np.ascontiguousarray(im)  # contiguous
             im = torch.from_numpy(im)
@@ -150,6 +157,7 @@ class BasePredictor:
         im = im.half() if self.model.fp16 else im.float()  # uint8 to fp16/32
         if not_tensor:
             im /= 255  # 0 - 255 to 0.0 - 1.0
+        print("shape after preprocess",im.shape)
         return im
 
     def inference(self, im, *args, **kwargs):
