@@ -333,7 +333,7 @@ class Concat(nn.Module):
 
 
 class FeatureFusionBlock(nn.Module):
-    def __init__(self, method='add',params = None):
+    def __init__(self, method='diff',params = None):
         """
         Initialize the FeatureFusionBlock.
         Args:
