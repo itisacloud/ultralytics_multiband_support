@@ -325,7 +325,10 @@ class DetectionModel(BaseModel):
         self.names = {i: f"{i}" for i in range(self.yaml["nc"])}  # default names dict
         self.inplace = self.yaml.get("inplace", True)
         self.end2end = getattr(self.model[-1], "end2end", False)
-        self.sync_interval = getattr(self.yaml,"sync_interval",0)
+        self.sync_interval = self.yaml.get("sync_interval",0)
+        LOGGER.info(f"sync_interval:{self.sync_interval}")
+        LOGGER.info(self.yaml)
+
         self.sync_layers = getattr(self.yaml,"synchronize",[])
 
         # Build strides
@@ -946,6 +949,10 @@ def attempt_load_one_weight(weight, device=None, inplace=True, fuse=False):
     # Return model and ckpt
     return model, ckpt
 
+def sync_hook(module, original_layer):
+    """Hook to synchronize weights after each forward pass. #keep for potential use cases in syncing"""
+    module.load_state_dict(original_layer.state_dict(), strict=False)
+
 
 def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
     """Parse a YOLO model.yaml dictionary into a PyTorch model."""
@@ -975,7 +982,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         sync_layers = []
     else:
         LOGGER.info(f"enabled the sync of the following pairs of layers: \n {sync_layers}")
-        LOGGER.ingo(f"siamese: {d.get('siamese', False)} | sync interval : {d.get('sync_interval',0)}")
+        LOGGER.info(f"siamese: {d.get('siamese', False)} | sync interval : {d.get('sync_interval',0)}")
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]
 

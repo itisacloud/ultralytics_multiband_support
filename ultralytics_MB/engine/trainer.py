@@ -129,6 +129,7 @@ class BaseTrainer:
 
         # Model and Dataset
         self.model = check_model_file_from_stem(self.args.model)  # add suffix, i.e. yolov8n -> yolov8n.pt
+
         try:
             if self.args.task == "classify":
                 self.data = check_cls_dataset(self.args.data)
@@ -408,8 +409,6 @@ class BaseTrainer:
                 self.scaler.scale(self.loss).backward()
 
                 #sync in the defined intervals
-
-
                 # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
                 if ni - last_opt_step >= self.accumulate:
                     self.optimizer_step()
