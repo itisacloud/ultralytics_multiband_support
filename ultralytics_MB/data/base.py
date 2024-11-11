@@ -217,6 +217,8 @@ class BaseDataset(Dataset):
                     im = tiff.imread(f)
                 else:
                     raise ValueError(f"Image format not supported: {f.suffix}")
+            if N_CHANNELS != im.shape[2]:
+                im = im[:, :, :N_CHANNELS]# keep only the first N_CHANNELS bands
 
             if im is None:
                 raise FileNotFoundError(f"Image Not Found {f}")
