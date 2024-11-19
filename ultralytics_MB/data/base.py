@@ -181,7 +181,6 @@ class BaseDataset(Dataset):
                 self.labels[i]["cls"][:, 0] = 0
 
     def load_image(self, i, rect_mode=True):
-
         """Loads 1 image from dataset index 'i', returns (im, resized hw)."""
         im, f, fn = self.ims[i], self.im_files[i], self.npy_files[i]
         if im is None:  # not cached in RAM
@@ -200,8 +199,6 @@ class BaseDataset(Dataset):
 
             N_CHANNELS = self.hyp.channels
             bands = self.hyp.bands
-
-
             if read_img:
                 # read image
                 if f.lower().endswith((".png",".jpg",".jpeg",".bmp",".dng",".gif",".webp",".mpo")):
@@ -217,8 +214,35 @@ class BaseDataset(Dataset):
                     im = tiff.imread(f)
                 else:
                     raise ValueError(f"Image format not supported: {f.suffix}")
-            if N_CHANNELS != im.shape[2]:
-                im = im[:, :, :N_CHANNELS]# keep only the first N_CHANNELS bands
+            im_new = []
+            for band in bands:
+                #case one diff  e.g. "diff([0,1,2],[3,4,5])"
+                if isinstance(band, str):
+                    if "diff" in band:
+                        band_0 = [int(b) for b in band.replace("diff([","").split("],[")[0].split(",")]
+                        band_1 = [int(b) for b in band.replace("diff([","").split("],[")[1].replace("])","").split(",")]
+                        part = cv2.absdiff(im[:,:,band_0],im[:,:,band_1])
+
+                        if "grey_diff" in band:
+                            part = cv2.cvtColor(part, cv2.COLOR_BGR2GRAY)
+
+                elif callable(band): #check if band is a fucntion that can be applied
+                    part = band(im)
+                else:
+                    part = im[:,:,band]
+                if len(part.shape) == 3:
+                    for i in range(part.shape[2]):
+                        im_new.append(part[:, :, i])
+                elif len(part.shape) == 2:
+                    im_new.append(part)
+                else:
+                    raise ValueError(f"Band seems to have a invalid shape, please check the provided config of bands.")
+
+            print(im.shape)
+            im = np.stack(im_new,axis=2)
+            print(im.shape)
+            #assert if the number of bands is equal to the number of bands in the image, requires a more complex config with the bands parameter
+            assert N_CHANNELS == im.shape[2], f"Number of bands in the image is {im.shape[2]}, but {len(bands)} bands are specified in the config file."
 
             if im is None:
                 raise FileNotFoundError(f"Image Not Found {f}")
