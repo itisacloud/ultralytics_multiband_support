@@ -238,9 +238,8 @@ class BaseDataset(Dataset):
                 else:
                     raise ValueError(f"Band seems to have a invalid shape, please check the provided config of bands.")
 
-            print(im.shape)
             im = np.stack(im_new,axis=2)
-            print(im.shape)
+
             #assert if the number of bands is equal to the number of bands in the image, requires a more complex config with the bands parameter
             assert N_CHANNELS == im.shape[2], f"Number of bands in the image is {im.shape[2]}, but {len(bands)} bands are specified in the config file."
 

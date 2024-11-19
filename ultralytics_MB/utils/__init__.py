@@ -457,12 +457,16 @@ def yaml_save(file="data.yaml", data=None, header=""):
     for k, v in data.items():
         if not isinstance(v, valid_types):
             data[k] = str(v)
+        if k == "bands":
+            data[k] = [b if not callable(b) else b.__name__ for b in v ]
 
     # Dump data to file in YAML format
     with open(file, "w", errors="ignore", encoding="utf-8") as f:
         if header:
             f.write(header)
+
         yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+
 
 
 def yaml_load(file="data.yaml", append_filename=False):
