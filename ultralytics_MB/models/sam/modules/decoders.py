@@ -78,7 +78,7 @@ class MaskDecoder(nn.Module):
         dense_prompt_embeddings: torch.Tensor,
         multimask_output: bool,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
+        self.quality_ = """
         Predict masks given image and prompt embeddings.
 
         Args:

@@ -979,10 +979,20 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
     sync_layers = d.get("synchronize",[])
 
     if not d.get("siamese", False) or d.get("sync_interval",0) != 0:
+        no_grad_layers = [l[1] for l in sync_layers]
         sync_layers = []
     else:
         LOGGER.info(f"enabled the sync of the following pairs of layers: \n {sync_layers}")
         LOGGER.info(f"siamese: {d.get('siamese', False)} | sync interval : {d.get('sync_interval',0)}")
+
+    transfer_model = d.get("transfer_model",False)
+
+    if transfer_model:
+        from ultralytics_MB import YOLO
+        transfer_model = YOLO(transfer_model)
+        print(f"transfermodel structure = {transfer_model}")
+        transfer_layers = d.get("transfer_layers",None)
+
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
         m = getattr(torch.nn, m[3:]) if "nn." in m else globals()[m]
 
@@ -1095,6 +1105,20 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             c2 = ch[f]
 
         m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
+
+        if transfer_model and transfer_layers:
+            if i in [x[0] for x in transfer_layers]:
+                try:
+                    transfer_layer = [x[1] for x in transfer_layers if x[0] == i][0]
+                    m_.load_state_dict(transfer_model.model.model[transfer_layer].state_dict())
+                except:
+                    print(transfer_layer,i)
+                    print(transfer_model.model.model[transfer_layer])
+                    print(m_)
+                    print(f"tranfer state_dict:{transfer_model.model.model[transfer_layer].state_dict().keys()}")
+                    print(f"layer state dict: {m_.state_dict().keys()}")
+
+
         t = str(m)[8:-2].replace("__main__.", "")  # module type
         m_.np = sum(x.numel() for x in m_.parameters())  # number params
         m_.i, m_.f, m_.type = i, f, t  # attach index, 'from' index, type
@@ -1106,11 +1130,17 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             original = [x[0] for x in sync_layers if x[1] == i][0]
             m_ = layers[original]
             # sync with previous layer
+
+        if i in no_grad_layers:
+            for param in m_.parameters():
+                param.requires_grad = False
+
         layers.append(m_)
 
         if i == 0:
             ch = []
         ch.append(c2)
+    del transfer_model
     return nn.Sequential(*layers), sorted(save)
 
 

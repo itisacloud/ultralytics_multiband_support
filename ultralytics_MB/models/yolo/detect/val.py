@@ -1,4 +1,4 @@
-# ultralytics_MB YOLO 🚀, AGPL-3.0 license
+# Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import os
 from pathlib import Path
@@ -22,7 +22,7 @@ class DetectionValidator(BaseValidator):
         ```python
         from ultralytics_MB.models.yolo.detect import DetectionValidator
 
-        args = dict(model="yolov8n.pt", data="coco8.yaml")
+        args = dict(model="yolo11n.pt", data="coco8.yaml")
         validator = DetectionValidator(args=args)
         validator()
         ```

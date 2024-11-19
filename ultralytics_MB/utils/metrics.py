@@ -1,4 +1,4 @@
-# ultralytics_MB YOLO 🚀, AGPL-3.0 license
+# Ultralytics YOLO 🚀, AGPL-3.0 license
 """Model validation metrics."""
 
 import math
@@ -62,10 +62,9 @@ def box_iou(box1, box2, eps=1e-7):
     Returns:
         (torch.Tensor): An NxM tensor containing the pairwise IoU values for every element in box1 and box2.
     """
-
     # NOTE: Need .float() to get accurate iou values
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
-    (a1, a2), (b1, b2) = box1.unsqueeze(1).chunk(2, 2), box2.unsqueeze(0).chunk(2, 2)
+    (a1, a2), (b1, b2) = box1.float().unsqueeze(1).chunk(2, 2), box2.float().unsqueeze(0).chunk(2, 2)
     inter = (torch.min(a2, b2) - torch.max(a1, b1)).clamp_(0).prod(2)
 
     # IoU = inter / (area1 + area2 - inter)
@@ -166,7 +165,7 @@ def kpt_iou(kpt1, kpt2, area, sigma, eps=1e-7):
     d = (kpt1[:, None, :, 0] - kpt2[..., 0]).pow(2) + (kpt1[:, None, :, 1] - kpt2[..., 1]).pow(2)  # (N, M, 17)
     sigma = torch.tensor(sigma, device=kpt1.device, dtype=kpt1.dtype)  # (17, )
     kpt_mask = kpt1[..., 2] != 0  # (N, 17)
-    e = d / (2 * sigma).pow(2) / (area[:, None, None] + eps) / 2  # from cocoeval
+    e = d / ((2 * sigma).pow(2) * (area[:, None, None] + eps) * 2)  # from cocoeval
     # e = d / ((area[None, :, None] + eps) * sigma) ** 2 / 2  # from formula
     return ((-e).exp() * kpt_mask[:, None]).sum(-1) / (kpt_mask.sum(-1)[:, None] + eps)
 
@@ -304,7 +303,7 @@ class ConfusionMatrix:
         self.task = task
         self.matrix = np.zeros((nc + 1, nc + 1)) if self.task == "detect" else np.zeros((nc, nc))
         self.nc = nc  # number of classes
-        self.conf = 0.25 if conf in (None, 0.001) else conf  # apply 0.25 if default val conf is passed
+        self.conf = 0.25 if conf in {None, 0.001} else conf  # apply 0.25 if default val conf is passed
         self.iou_thres = iou_thres
 
     def process_cls_preds(self, preds, targets):
@@ -401,19 +400,19 @@ class ConfusionMatrix:
             names (tuple): Names of classes, used as labels on the plot.
             on_plot (func): An optional callback to pass plots path and data when they are rendered.
         """
-        import seaborn as sn
+        import seaborn  # scope for faster 'import ultralytics'
 
         array = self.matrix / ((self.matrix.sum(0).reshape(1, -1) + 1e-9) if normalize else 1)  # normalize columns
         array[array < 0.005] = np.nan  # don't annotate (would appear as 0.00)
 
         fig, ax = plt.subplots(1, 1, figsize=(12, 9), tight_layout=True)
         nc, nn = self.nc, len(names)  # number of classes, names
-        sn.set(font_scale=1.0 if nc < 50 else 0.8)  # for label size
+        seaborn.set_theme(font_scale=1.0 if nc < 50 else 0.8)  # for label size
         labels = (0 < nn < 99) and (nn == nc)  # apply names to ticklabels
         ticklabels = (list(names) + ["background"]) if labels else "auto"
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")  # suppress empty matrix RuntimeWarning: All-NaN slice encountered
-            sn.heatmap(
+            seaborn.heatmap(
                 array,
                 ax=ax,
                 annot=nc < 30,
@@ -599,7 +598,7 @@ def ap_per_class(
         # AP from recall-precision curve
         for j in range(tp.shape[1]):
             ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
-            if plot and j == 0:
+            if j == 0:
                 prec_values.append(np.interp(x, mrec, mpre))  # precision at mAP@0.5
 
     prec_values = np.array(prec_values)  # (nc, 1000)
@@ -821,7 +820,7 @@ class DetMetrics(SimpleClass):
         fitness: Computes the fitness score based on the computed detection metrics.
         ap_class_index: Returns a list of class indices sorted by their average precision (AP) values.
         results_dict: Returns a dictionary that maps detection metric keys to their computed values.
-        curves: TODO
+        curves:
         curves_results: TODO
     """
 
@@ -1173,8 +1172,6 @@ class ClassifyMetrics(SimpleClass):
         top1 (float): The top-1 accuracy.
         top5 (float): The top-5 accuracy.
         speed (Dict[str, float]): A dictionary containing the time taken for each step in the pipeline.
-
-    Properties:
         fitness (float): The fitness of the model, which is equal to top-5 accuracy.
         results_dict (Dict[str, Union[float, str]]): A dictionary containing the classification metrics and fitness.
         keys (List[str]): A list of keys for the results_dict.
@@ -1224,7 +1221,10 @@ class ClassifyMetrics(SimpleClass):
 
 
 class OBBMetrics(SimpleClass):
+    """Metrics for evaluating oriented bounding box (OBB) detection, see https://arxiv.org/pdf/2106.06072.pdf."""
+
     def __init__(self, save_dir=Path("."), plot=False, on_plot=None, names=()) -> None:
+        """Initialize an OBBMetrics instance with directory, plotting, callback, and class names."""
         self.save_dir = save_dir
         self.plot = plot
         self.on_plot = on_plot
