@@ -219,8 +219,8 @@ class BaseDataset(Dataset):
                 #case one diff  e.g. "diff([0,1,2],[3,4,5])"
                 if isinstance(band, str):
                     if "diff" in band:
-                        band_0 = [int(b) for b in band.replace("diff([","").split("],[")[0].split(",")]
-                        band_1 = [int(b) for b in band.replace("diff([","").split("],[")[1].replace("])","").split(",")]
+                        band_0 = [int(b) for b in band.replace("grey_diff([","").replace("diff([","").split("],[")[0].split(",")]
+                        band_1 = [int(b) for b in band.replace("grey_diff([","").replace("diff([","").split("],[")[1].replace("])","").split(",")]
                         part = cv2.absdiff(im[:,:,band_0],im[:,:,band_1])
 
                         if "grey_diff" in band:
