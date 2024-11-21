@@ -316,8 +316,12 @@ class DetectionModel(BaseModel):
             self.yaml["backbone"][0][2] = "nn.Identity"
 
         # Define model
-        if ch is None: #use default value defined in yaml, confusing that default value is not defined in default.yaml
-            ch = self.yaml["ch"] = self.yaml.get("ch", 3) # input channels
+
+        #check if self.yaml["ch"] is defined if yes log a warning that it will overwrite
+        if "ch" in self.yaml:
+            LOGGER.warning(f"Your model has a fixed number of bands defined in its config and will overwrite the number of bands passed to the model. ch={ch}")
+        ch = self.yaml["ch"] = self.yaml.get("ch", ch) # input channels
+
 
         LOGGER.warning(f"ch = {ch}")
         if nc and nc != self.yaml["nc"]:
@@ -328,10 +332,10 @@ class DetectionModel(BaseModel):
         self.inplace = self.yaml.get("inplace", True)
         self.end2end = getattr(self.model[-1], "end2end", False)
         self.sync_interval = self.yaml.get("sync_interval",0)
+        self.sync_freeze = self.yaml.get("sync_freeze",False)
         LOGGER.info(f"sync_interval:{self.sync_interval}")
         LOGGER.info(self.yaml)
-
-        self.sync_layers = getattr(self.yaml,"synchronize",[])
+        self.sync_layers = self.yaml.get("synchronize",[])
 
         # Build strides
         m = self.model[-1]  # Detect()
@@ -346,6 +350,7 @@ class DetectionModel(BaseModel):
                     return self.forward(x)["one2many"]
                 return self.forward(x)[0] if isinstance(m, (Segment, Pose, OBB)) else self.forward(x)
             zeroes = torch.zeros(1, ch, s, s)
+            print(zeroes.size())
             m.stride = torch.tensor([s / x.shape[-2] for x in _forward(zeroes)])  # forward
             self.stride = m.stride
             m.bias_init()  # only run once

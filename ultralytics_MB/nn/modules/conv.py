@@ -332,54 +332,103 @@ class Concat(nn.Module):
         return torch.cat(x, self.d)
 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import os
 class FeatureFusionBlock(nn.Module):
-    def __init__(self, method='diff',params = None):
+    def __init__(self, params=None, in_channels=128):
         """
         Initialize the FeatureFusionBlock.
         Args:
-            method (str): Method to combine the features ('add', 'multiply', 'weighted', 'attention').
+            method (str): Method to combine the features ('add', 'diff', 'multiply', 'weighted', 'attention',
+                          'cross_attention', 'cbam', 'cbam_cross_attention').
+            params (list): Parameters for weighted fusion.
+            in_channels (int): Number of input channels for attention mechanisms.
         """
         super(FeatureFusionBlock, self).__init__()
-        assert method in ['add','diff', 'multiply', 'weighted', 'attention'], \
-            "Method must be 'add', 'multiply', 'weighted', or 'attention'."
-        self.method = method
-
-        if method == 'weighted':
+        self.method = os.getenv("FUSION_METHOD", "diff")
+        assert self.method in ['add', 'diff', 'multiply', 'weighted', 'attention',
+                          'cross_attention', 'cbam', 'cbam_cross_attention'], \
+            "Invalid method specified."
+        self.first = False
+        if self.method == 'weighted':
             # Learnable weights for fusion
             self.weight1 = nn.Parameter(torch.Tensor([params[0]]))
             self.weight2 = nn.Parameter(torch.Tensor([params[1]]))
-        elif method == 'attention':
+        elif self.method == 'attention':
             # Squeeze-and-Excitation block for channel-wise attention
             self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-            self.fc1 = nn.Conv2d(128, 32, kernel_size=1, bias=False)
+            self.fc1 = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
             self.relu = nn.ReLU(inplace=True)
-            self.fc2 = nn.Conv2d(32, 128, kernel_size=1, bias=False)
+            self.fc2 = nn.Conv2d(in_channels // 4, in_channels, kernel_size=1, bias=False)
             self.sigmoid = nn.Sigmoid()
+        elif self.method == 'cross_attention':
+            # Cross Attention using Query, Key, Value mechanism
+            self.first = True
+        elif self.method == 'cbam':
+            # CBAM (Channel and Spatial Attention Module)
+            self.first = True
+        elif self.method == 'cbam_cross_attention':
+            # CBAM + Cross Attention
+            self.first = True
+
+    def _build_channel_attention(self, in_channels):
+        """Helper function to build channel attention."""
+        return nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels // 4, in_channels, kernel_size=1, bias=False),
+            nn.Sigmoid()
+        )
+
+    def _build_spatial_attention(self):
+        """Helper function to build spatial attention."""
+        return nn.Sequential(
+            nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False),
+            nn.Sigmoid()
+        )
 
     def forward(self, x):
         """
         Forward pass of the FeatureFusionBlock.
 
         Args:
-            x1 (torch.Tensor): First input feature map.
-            x2 (torch.Tensor): Second input feature map.
+            x (tuple): Tuple of two tensors (x1, x2).
 
         Returns:
-            torch.Tensor: Fused output feature map with the same dimensions as inputs.
+            torch.Tensor: Fused output feature map.
         """
-        x1 = x[0]
-        x2 = x[1]
+        x1, x2 = x
+        if self.first:
+            in_channels = x1.size(1)  # Infer channels from input tensor
+            if self.method == 'attention':
+                self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+                self.fc1 = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
+                self.relu = nn.ReLU(inplace=True)
+                self.fc2 = nn.Conv2d(in_channels // 4, in_channels, kernel_size=1, bias=False)
+                self.sigmoid = nn.Sigmoid()
+            if self.method in ['cross_attention', 'cbam_cross_attention']:
+                self.query = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
+                self.key = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
+                self.value = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
+                self.scale = (in_channels // 4) ** -0.5
+            if self.method in ['cbam', 'cbam_cross_attention']:
+                self.channel_attention = self._build_channel_attention(in_channels)
+                self.spatial_attention = self._build_spatial_attention()
+            self.first = False  # Mark initialization as complete
+
         if self.method == 'add':
-            return x1 + x2  # Element-wise addition
+            return x1 + x2
         elif self.method == 'diff':
             return x1 - x2
         elif self.method == 'multiply':
-            return x1 * x2  # Element-wise multiplication
+            return x1 * x2
         elif self.method == 'weighted':
-            # Weighted sum of the two inputs
             return self.weight1 * x1 + self.weight2 * x2
+
         elif self.method == 'attention':
-            # Channel-wise attention
             combined = x1 + x2
             se = self.global_avg_pool(combined)
             se = self.fc1(se)
@@ -387,4 +436,36 @@ class FeatureFusionBlock(nn.Module):
             se = self.fc2(se)
             se = self.sigmoid(se)
             return combined * se
+        elif self.method == 'cross_attention':
+            Q = self.query(x1).flatten(2).transpose(-1, -2)  # (B, H*W, C//4)
+            K = self.key(x2).flatten(2)  # (B, C//4, H*W)
+            V = self.value(x2).flatten(2).transpose(-1, -2)  # (B, H*W, C//4)
+            attention = F.softmax(torch.bmm(Q, K) * self.scale, dim=-1)  # (B, H*W, H*W)
+            out = torch.bmm(attention, V).transpose(-1, -2)  # (B, C//4, H*W)
+            out = out.view(x1.size(0), x1.size(1), x1.size(2), x1.size(3))  # Reshape to (B, C, H, W)
+            return out
+        elif self.method == 'cbam':
+            combined = x1 + x2
+            ca = self.channel_attention(combined)
+            combined = combined * ca
+            avg_pool = torch.mean(combined, dim=1, keepdim=True)
+            max_pool, _ = torch.max(combined, dim=1, keepdim=True)
+            sa = self.spatial_attention(torch.cat([avg_pool, max_pool], dim=1))
+            return combined * sa
+        elif self.method == 'cbam_cross_attention':
+            combined = x1 + x2
+            ca = self.channel_attention(combined)
+            combined = combined * ca
+            avg_pool = torch.mean(combined, dim=1, keepdim=True)
+            max_pool, _ = torch.max(combined, dim=1, keepdim=True)
+            sa = self.spatial_attention(torch.cat([avg_pool, max_pool], dim=1))
+            combined = combined * sa
+            Q = self.query(combined).flatten(2).transpose(-1, -2)
+            K = self.key(x2).flatten(2)
+            V = self.value(x2).flatten(2).transpose(-1, -2)
+            attention = F.softmax(torch.bmm(Q, K) * self.scale, dim=-1)
+            out = torch.bmm(attention, V).transpose(-1, -2)
+            out = out.view(x1.size(0), x1.size(1), x1.size(2), x1.size(3))
+            return out
+
 

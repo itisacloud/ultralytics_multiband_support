@@ -255,8 +255,23 @@ class BaseTrainer:
             if isinstance(self.args.freeze, int)
             else []
         )
-        always_freeze_names = [".dfl"]  # always freeze these layers
-        freeze_layer_names = [f"model.{x}." for x in freeze_list] + always_freeze_names
+
+        synched_layers = [
+            f"model.{layer[1]}" for layer in getattr(self.model, "sync_layers", [])
+        ] if self.model.sync_freeze else []
+
+        print("syched_layers to be freezed",synched_layers)
+        print("self.model.sync_freeze",self.model.sync_freeze)
+        print("self.model.sync_layers",self.model.sync_layers)
+
+        # Define layers to always freeze
+        always_freeze_names = [".dfl"]
+
+        # Combine freeze lists
+        freeze_layer_names = [
+                                 f"model.{layer}." for layer in freeze_list
+                             ] + synched_layers + always_freeze_names
+
         for k, v in self.model.named_parameters():
             # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
             if any(x in k for x in freeze_layer_names):
