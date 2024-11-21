@@ -260,9 +260,6 @@ class BaseTrainer:
             f"model.{layer[1]}" for layer in getattr(self.model, "sync_layers", [])
         ] if self.model.sync_freeze else []
 
-        print("syched_layers to be freezed",synched_layers)
-        print("self.model.sync_freeze",self.model.sync_freeze)
-        print("self.model.sync_layers",self.model.sync_layers)
 
         # Define layers to always freeze
         always_freeze_names = [".dfl"]
