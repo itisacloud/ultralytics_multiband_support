@@ -316,7 +316,9 @@ class DetectionModel(BaseModel):
             self.yaml["backbone"][0][2] = "nn.Identity"
 
         # Define model
-        ch = self.yaml["ch"] = self.yaml.get("ch", ch) # input channels
+        if ch is None: #use default value defined in yaml, confusing that default value is not defined in default.yaml
+            ch = self.yaml["ch"] = self.yaml.get("ch", 3) # input channels
+
         LOGGER.warning(f"ch = {ch}")
         if nc and nc != self.yaml["nc"]:
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")

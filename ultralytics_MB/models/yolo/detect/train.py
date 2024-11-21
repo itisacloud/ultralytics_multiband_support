@@ -132,12 +132,13 @@ class DetectionTrainer(BaseTrainer):
 
     def get_model(self, cfg=None, weights=None, verbose=True):
         """Return a YOLO detection model."""
-        model = DetectionModel(cfg, nc=self.data["nc"], verbose=verbose and RANK == -1)
+
+        new_channels = self.args.channels
+        model = DetectionModel(cfg, nc=self.data["nc"],ch=new_channels, verbose=verbose and RANK == -1)
 
         if weights:
             model.load(weights)
 
-        new_channels = self.args.channels
         indexes = self.args.adjust_layers
 
         model = self.modify_input_channels(model=model, new_channels=new_channels, indexes=indexes)
