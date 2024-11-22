@@ -329,6 +329,9 @@ class DetectionModel(BaseModel):
         LOGGER.info(self.yaml)
         self.sync_layers = self.yaml.get("synchronize",[])
 
+        if ch < self.yaml.get("ch", 3):
+            ch = self.yaml["ch"] = self.yaml.get("ch", ch)
+
         # Build strides
         m = self.model[-1]  # Detect()
         if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
