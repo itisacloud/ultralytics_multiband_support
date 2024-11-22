@@ -316,14 +316,6 @@ class DetectionModel(BaseModel):
             self.yaml["backbone"][0][2] = "nn.Identity"
 
         # Define model
-
-        #check if self.yaml["ch"] is defined if yes log a warning that it will overwrite
-        if "ch" in self.yaml:
-            LOGGER.warning(f"Your model has a fixed number of bands defined in its config and will overwrite the number of bands passed to the model. ch={ch}")
-        ch = self.yaml["ch"] = self.yaml.get("ch", ch) # input channels
-
-
-        LOGGER.warning(f"ch = {ch}")
         if nc and nc != self.yaml["nc"]:
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml["nc"] = nc  # override YAML value

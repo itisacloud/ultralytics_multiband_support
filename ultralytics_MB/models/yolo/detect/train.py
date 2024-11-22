@@ -134,6 +134,7 @@ class DetectionTrainer(BaseTrainer):
         """Return a YOLO detection model."""
 
         new_channels = self.args.channels
+        print("self.args.channels", new_channels)
         model = DetectionModel(cfg, nc=self.data["nc"],ch=new_channels, verbose=verbose and RANK == -1)
 
         if weights:
