@@ -402,18 +402,14 @@ class FeatureFusionBlock(nn.Module):
         """
         x1, x2 = x
         if self.first:
-            in_channels = x1.size(1)  # Infer channels from input tensor
-            if self.method == 'attention':
-                self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-                self.fc1 = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
-                self.relu = nn.ReLU(inplace=True)
-                self.fc2 = nn.Conv2d(in_channels // 4, in_channels, kernel_size=1, bias=False)
-                self.sigmoid = nn.Sigmoid()
+            in_channels = x1.size(1)
+            self.shape = x1.size()
+            # Infer channels from input tensor
             if self.method in ['cross_attention', 'cbam_cross_attention']:
-                self.query = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
-                self.key = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
-                self.value = nn.Conv2d(in_channels, in_channels // 4, kernel_size=1, bias=False)
-                self.scale = (in_channels // 4) ** -0.5
+                self.query = nn.Conv2d(in_channels, in_channels, kernel_size=1, bias=False)
+                self.key = nn.Conv2d(in_channels, in_channels , kernel_size=1, bias=False)
+                self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1, bias=False)
+                self.scale = (in_channels) ** -0.5
             if self.method in ['cbam', 'cbam_cross_attention']:
                 self.channel_attention = self._build_channel_attention(in_channels)
                 self.spatial_attention = self._build_spatial_attention()
