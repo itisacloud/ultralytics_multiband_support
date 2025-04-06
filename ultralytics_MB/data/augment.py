@@ -1015,7 +1015,7 @@ class Format:
         """Format the image for YOLO from Numpy array to PyTorch tensor."""
         if not self.dual_stream:
             if img.shape[-1] == 3:
-                img = img[::-1]  # BGR to RBG
+                img = img[:,:,[2,1,0]]  # BGR to RBG
             else:
                 if img.shape[-1] == 4:
                     img = img[:, :, [2, 1, 0, 3]]
