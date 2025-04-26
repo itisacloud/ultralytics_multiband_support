@@ -3,8 +3,10 @@
 This repository is a fork of the [Ultralytics](https://github.com/ultralytics/ultralytics) package, extended to support:
 
 - **Multispectral & Remote-Sensing Inputs**  
-  – Full compatibility with images having arbitrary channel counts (e.g. RGB+NIR, multi-band satellite)  
-  – Missing input-channel weights are initialized via Xavier uniform when loading a pretrained checkpoint  
+  – Full compatibility with images having arbitrary channel counts (e.g. RGB+NIR, multi-band satellite)
+    - supporting tiff files with n bands as a new file type
+    – Missing input-channel weights are initialized via Xavier uniform when loading a pretrained checkpoint  
+
 
 - **Siamese / Dual-Stream Architectures**  
   – Built-in support for Siamese YOLO models geared toward bi-temporal change detection  
@@ -12,7 +14,8 @@ This repository is a fork of the [Ultralytics](https://github.com/ultralytics/ul
 
 - **Tested Models & Tasks**  
   – **Classification & Detection** on multispectral data: YOLOv8, YOLOv9, and YOLOv10  
-  – Other tasks (segmentation, pose) may work but are currently untested or broken  
+  – Other tasks (segmentation, pose) may work but are currently untested or brokene
+  - **Siamese** object level change detection for YOLOv9e. 
 
 - **Usage Modes**  
   – Train from scratch on your own multispectral dataset  
@@ -45,7 +48,7 @@ In this fork, we combine a Siamese backbone with YOLO’s detection head to focu
 
 ## Simplified Comparison: YOLO vs. Siamese YOLO
 
-> *[Insert your diagram or bullet-list here, showing two parallel backbones with shared weights vs. the single-backbone standard YOLO, and how feature-difference fusion feeds into the detection head.]*
+![siamese_schema.png](siamese_schema.png)
 
 | Feature                | Standard YOLO            | Siamese YOLO                       |
 |------------------------|--------------------------|------------------------------------|
@@ -63,6 +66,77 @@ In this fork, we combine a Siamese backbone with YOLO’s detection head to focu
    ```bash
    pip install git+https://github.com/your-org/ultralytics-multispectral.git
    ```
-2. **parameters**
-   please take a look at the two provied jupyter notebooks they introduce you to the setting of the hyper parameters
-   
+## configuration
+
+### mulitlayer 
+
+### 3. Configuring the Model for 6-Channel Input
+
+**A) Fine-tune from pretrained RGB weights**  
+```python
+from ultralytics_MB import YOLO
+
+# 1. Load a pretrained YOLOv8n (.pt) checkpoint
+model = YOLO('yolov8n.pt')
+
+# 2. Tell it to expect 6 input channels instead of 3
+#    and only adjust the first conv layer’s weights
+model.train(
+    data='data.yaml',
+    channels=6,           # input now has 6 bands (RGB@t1 + RGB@t2)
+    adjust_layers=[0],    # remaps layer 0 weights from 3→6 channels
+    bands = [0,1,2,3,4,5], # defines which bands should be loaded 
+
+    # … other args (imgsz, epochs, batch, etc.)
+)
+```
+- **`channels=6`** re-builds the very first conv kernel to accept 6 bands.  
+- **`adjust_layers=[0]`** loads the RGB weights into both halves of that new 6-channel kernel, so you retain all pretrained features for timestamp 1 & 2.
+- ** bands = [0,1,2,3,4,5]** defines which bands should be loaded 
+
+---
+
+**B) Train from scratch on 6 channels**  
+```python
+from ultralytics_MB import YOLO
+
+# 1. Load an untrained YOLOv8n architecture (.yaml)
+model = YOLO('custom_colo.yaml')
+
+# 2. Directly train with 6 inputs—no weight remapping needed
+model.train(
+    data='data.yaml',
+    channels=6,  
+    bands = [0,1,2,3,4,5]
+)
+```
+- Using the `.yaml` spec builds your network “from scratch” with the requested number of channels baked in.
+
+### 3. Configuring the Siamese YOLOv9e-s (ES) for 6-Channel Dual-Stream Input
+
+```python
+from ultralytics_MB import YOLO
+
+# 1. Load the Siamese-enabled “ES” spec — NOT the standard yolov9e.yaml!
+model = YOLO('yolov9es.yaml', task='detect')
+
+# 2. Tell it you have 6 input bands (RGB@t1 + RGB@t2)
+#    and enable the Siamese dual-stream head
+model.train(
+    data='data.yaml',
+    channels=6,         # network expects 6-band inputs
+    bands=[0,1,2,3,4,5], # indexes of the band that should be loaded, first 
+    dual_stream=True,   # turn on Siamese twin-stream processing
+    # … other hyperparams go below
+)
+```
+
+- **`yolov9es.yaml`** is the special “ES” version with the extra dual-stream modules baked in.  
+- **`channels=6`** defines your two RGB timestamps as six input planes.  
+- **`bands`** = [0,1,2,3,4,5] defines which bands should be loaded, first half corresponds to image one and the second to image 2 
+- **`dual_stream=True`** wires the Siamese twin backbones and fusion head for change detection.
+
+- **`imgsz`**, **`epochs`**, **`batch`**, **`single_cls`** are your usual YOLO training flags.  
+- **`channels`** and **`dual_stream`** are the only extras to spin up the Siamese network on multi-band imagery.  
+
+
