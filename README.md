@@ -140,3 +140,56 @@ model.train(
 - **`channels`** and **`dual_stream`** are the only extras to spin up the Siamese network on multi-band imagery.  
 
 
+### `FUSION_METHOD`
+
+The `FeatureFusionBlock` picks its fusion strategy from the `FUSION_METHOD` environment variable. If you don’t set it, it defaults to **`diff`** (element-wise subtraction).
+
+#### Available modes
+
+- **`add`**  
+  Element-wise addition:  
+  ```python
+  out = x1 + x2
+  ```
+
+- **`diff`**  
+  Element-wise difference:  
+  ```python
+  out = x1 - x2
+  ```
+
+- **`multiply`**  
+  Element-wise multiplication:  
+  ```python
+  out = x1 * x2
+  ```
+
+- **`weighted`**  
+  Learnable weighted sum. You must pass two floats via `params=[w1, w2]` when you construct the block:  
+  ```python
+  block = FeatureFusionBlock(params=[0.7, 0.3], in_channels=128)
+  # out = 0.7*x1 + 0.3*x2
+  ```
+
+- **`attention`**  
+  Squeeze-and-Excitation channel attention on (x1 + x2).
+
+- **`cross_attention`**  
+  QKV-style cross-attention between x1 (queries) and x2 (keys, values).
+
+- **`cbam`**  
+  CBAM (Channel + Spatial) attention on (x1 + x2).
+
+- **`cbam_cross_attention`**  
+  CBAM followed by QKV cross-attention.
+
+#### How to set
+
+Before creating your fusion block, export the choice in your shell:
+
+```bash
+export FUSION_METHOD=attention
+```
+
+
+
